@@ -40,10 +40,10 @@ LDSTR	= -e start -Ttext ${TEXTSPOT}
 #Do NOT modify these lines
 SOBJ = startup.o intr.o 
 IOBJ = init.o i386.o evec.o kprintf.o
-UOBJ = mem.o disp.o ctsw.o syscall.o create.o user.o sem.o sleep.o signal.o
+UOBJ = mem.o disp.o ctsw.o syscall.o create.o user.o msg.o sleep.o signal.o
 
 #Add your sources here
-MY_OBJ = kbd.o zerorand.o di_calls.o
+MY_OBJ = memHeader.o pcb.o test.o sem.o
 
 
 # Don't modiy any of this unless you are really sure
@@ -73,21 +73,25 @@ ${IOBJ}:
 
 ${UOBJ}: 
 	${CC} ${CFLAGS} ../c/`basename $@ .o`.[c]
-${MY_OBJ}:
+
+${MY_OBJ}: 
 	${CC} ${CFLAGS} ../c/`basename $@ .o`.[c]
+
 init.o: ../c/init.c ../h/i386.h ../h/xeroskernel.h ../h/xeroslib.h
 i386.o: ../c/i386.c ../h/i386.h ../h/icu.h ../h/xeroskernel.h ../h/xeroslib.h
 evec.o: ../c/evec.c ../h/i386.h ../h/xeroskernel.h ../h/xeroslib.h
 kprintf.o: ../c/kprintf.c ../h/i386.h ../h/xeroskernel.h ../h/xeroslib.h
 mem.o: ../c/mem.c ../h/xeroskernel.h ../h/xeroslib.h
-disp.o: ../c/disp.c ../h/xeroskernel.h ../h/xeroslib.h 
-ctsw.o: ../c/ctsw.c ../h/xeroskernel.h ../h/xeroslib.h
+disp.o: ../c/disp.c ../h/xeroskernel.h ../h/xeroslib.h ../h/i386.h
+ctsw.o: ../c/ctsw.c ../h/xeroskernel.h ../h/xeroslib.h ../h/i386.h
 syscall.o: ../c/syscall.c ../h/xeroskernel.h ../h/xeroslib.h
 create.o: ../c/create.c ../h/xeroskernel.h ../h/xeroslib.h
 user.o: ../c/user.c ../h/xeroskernel.h ../h/xeroslib.h 
-sem.o: ../c/sem.c ../h/xeroskernel.h ../h/xeroslib.h 
+msg.o: ../c/msg.c ../h/xeroskernel.h ../h/xeroslib.h 
 sleep.o: ../c/sleep.c ../h/xeroskernel.h ../h/xeroslib.h
 signal.o: ../c/signal.c ../h/xeroskernel.h ../h/xeroslib.h
-zerorand.o: ../c/zerorand.c ../h/zerorand.h ../h/xeroskernel.h ../h/xeroslib.h
-kbd.o: ../c/kbd.c ../h/kbd.h ../h/xeroskernel.h ../h/xeroslib.h
-di_calls.o: ../c/di_calls.c ../h/di_calls.h ../h/xeroskernel.h ../h/xeroslib.h
+
+memHeader.o: ../c/memHeader.c ../h/xeroskernel.h
+pcb.o: ../c/pcb.c ../h/xeroskernel.h
+test.o: ../c/test.c ../h/xeroskernel.h ../h/xeroslib.h
+sem.o: ../c/sem.c ../h/xeroskernel.h

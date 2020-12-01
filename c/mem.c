@@ -1,88 +1,87 @@
 /* mem.c : memory manager
  */
 
-#include <xeroskernel.h>
 #include <i386.h>
+#include <xeroskernel.h>
 
-/* Your code goes here */
-/*Why do you need a paragraph mask?*/
-#define PARAGRAPH_MASK  (~(0xf))
+/* variable declarations */
+extern long freemem; /* free memory start */
+extern char	*maxaddr; /* max addr */
 
-extern long     freemem;
+////////////////////////////////////////////////////////////
+void kmeminit(void) {
+    memHeader *nextMemSlot = (memHeader *) HOLEEND; /* mem slot after HOLEEND */
 
-typedef struct struct_mem mem;
-struct struct_mem {
-    mem         *next;
-    mem         *prev;
-    int         size;
-};
+    memList = (memHeader *) freemem;
+    memList->size = HOLESTART - (unsigned long) memList->dataStart;
+    memList->prev = NULL;
+    memList->next = nextMemSlot;
 
-static mem      *head;
-
- void kmeminit( void ) {
-/****************************/
-
-     long       s;
-
-     s = ( freemem + 0x10 ) & PARAGRAPH_MASK;
-
-     head = (mem *)s;
-     head->size = HOLESTART - s;
-     head->prev = NULL;
-
-     s = HOLEEND;
-
-     head->next = (mem *)s;
-     head->next->next = NULL;
-     head->next->prev = head;
-     head->next->size = (1024 * 1024 * 4) - HOLEEND;
+    nextMemSlot->size = (unsigned long) maxaddr - (unsigned long) nextMemSlot->dataStart;
+    nextMemSlot->size = (nextMemSlot->size/16)*16; // make to 16
+    nextMemSlot->prev = memList;
+    nextMemSlot->next = NULL;
 }
 
-int  kfree(void * mem) {
-  return 1;
-}
+////////////////////////////////////////////////////////////
+void *kmalloc(size_t size) {
+    unsigned long memSize; /* size divisible by 16 */
+    memHeader *memSlot; /* memSlot to return */
 
-
- void *kmalloc( size_t size ) {
-/********************************/
-
-    mem         *p;
-    mem         *r;
-
-    if( size & 0xf ) {
-        size = ( size + 0x10 ) & PARAGRAPH_MASK;
+    // there is no free spot
+    if (memList == NULL) {
+        kprintf("There is no more free space.\n");
+        return NULL;
     }
 
-    for( p = head; p && ( p->size < size ); p = p->next );
-
-    if( !p ) {
-        return( 0 );
-    }
-
-    if( ( p->size - size ) < sizeof( mem ) ) {
-       if( p->next ) {
-            p->next->prev = p->prev;
-        }
-
-        if( p->prev ) {
-            p->prev->next = p->next;
-        } else {
-            head = p->next;
-        }
+    // set to minimum stack size
+    if (size < MIN_STACK_SIZE) {
+        memSize = MIN_STACK_SIZE;
     } else {
-        r = (mem *) ( (int)p + size );
-        *r = *p;
-
-        if( p->next ) {
-            p->next->prev = r;
-        }
-
-        if( p->prev ) {
-            p->prev->next = r;
-        } else {
-            head = r;
-        }
+        memSize = (size/16) + ((size%16)?1:0);
+        memSize = memSize*16;
     }
 
-    return( p );
+    // search for possible slots in the memory
+    memSlot = findMemSlot(memSize);
+    if (memSlot == NULL) {
+        kprintf("Unable to allocate memory.\n");
+        return NULL;
+    }
+
+    // allocate mem slot
+    allocateMemSlot(memSlot, memSize);
+    memSlot->sanityCheck = (char *) memSlot;
+    
+    return memSlot->dataStart;
+}
+
+////////////////////////////////////////////////////////////
+int kfree(void *ptr) {
+    unsigned long addr; /* the addr of dataStart[0] */
+    memHeader *memSlot; /* the current memSlot to add back to memList */
+
+    // check addr constraints
+    addr = (unsigned long) ptr;
+    if (addr < freemem) {
+        kprintf("Address should not be less than free mem.\n");
+        return FAILED;
+    }
+    if (addr > (unsigned long) maxaddr) {
+        kprintf("Address should not greater than max addr.\n");
+        return FAILED;
+    }
+    if (addr > HOLESTART && addr < HOLEEND) {
+        kprintf("Address should not be in the HOLE.\n");
+        return FAILED;
+    }
+
+    memSlot = (memHeader *) (addr - MEM_HEADER_SIZE);
+    if (!sanityCheck(memSlot, ptr)) {
+        kprintf("Something wrong occurred while doing sanity check.\n");
+        return FAILED;
+    }
+    insertToMemList(memSlot);
+    mergeMemSlot(memSlot);
+    return SUCCEED;
 }

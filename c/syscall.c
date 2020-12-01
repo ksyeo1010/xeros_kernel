@@ -4,70 +4,80 @@
 #include <xeroskernel.h>
 #include <stdarg.h>
 
+////////////////////////////////////////////////////////////
+int syscall(int call, ...) {
+    va_list ap;
+    int rc;
 
-int syscall( int req, ... ) {
-/**********************************/
+    va_start(ap, call);
 
-    va_list     ap;
-    int         rc;
-
-    va_start( ap, req );
-
-    __asm __volatile( " \
-        movl %1, %%eax \n\
-        movl %2, %%edx \n\
-        int  %3 \n\
-        movl %%eax, %0 \n\
+    __asm __volatile("  \
+        movl %1, %%eax  \n\
+        movl %2, %%edx  \n\
+        int  %3         \n\
+        movl %%eax, %0  \n\
         "
         : "=g" (rc)
-        : "g" (req), "g" (ap), "i" (KERNEL_INT)
-        : "%eax" 
+        : "g" (call), "g" (ap), "i" (SYS_CALL)
+        : "eax", "edx"
     );
- 
-    va_end( ap );
 
-    return( rc );
+    va_end(ap);
+
+    return rc;
 }
 
-unsigned int syscreate( funcptr fp, size_t stack ) {
-/*********************************************/
-
-    return( syscall( SYS_CREATE, fp, stack ) );
+////////////////////////////////////////////////////////////
+unsigned int syscreate(void (*func)(void), int stack) {
+    return syscall(SYS_CREATE, func, stack);
 }
 
-void sysyield( void ) {
-/***************************/
-  syscall( SYS_YIELD );
+////////////////////////////////////////////////////////////
+void sysyield(void) {
+    syscall(SYS_YIELD);
 }
 
- void sysstop( void ) {
-/**************************/
-
-   syscall( SYS_STOP );
+////////////////////////////////////////////////////////////
+void sysstop(void) {
+    syscall(SYS_STOP);
 }
 
-PID_t sysgetpid( void ) {
-/****************************/
-
-    return( syscall( SYS_GETPID ) );
+////////////////////////////////////////////////////////////
+pid_t sysgetpid(void) {
+    return syscall(SYS_GETPID);
 }
 
-void sysputs( char *str ) {
-/********************************/
-
-    syscall( SYS_PUTS, str );
+////////////////////////////////////////////////////////////
+void sysputs(char *str) {
+    syscall(SYS_PUTS, str);
 }
 
-unsigned int syssleep( unsigned int t ) {
-/*****************************/
-
-    return syscall( SYS_SLEEP, t );
+////////////////////////////////////////////////////////////
+int syskill(pid_t pid) {
+    return syscall(SYS_KILL, pid);
 }
 
-int syskill(PID_t pid) {
-  return syscall(SYS_KILL, pid);
+////////////////////////////////////////////////////////////
+int syssetprio(int priority) {
+    return syscall(SYS_SETPRIO, priority);
 }
 
+////////////////////////////////////////////////////////////
+int sysP(int semNo) {
+    return syscall(SYS_P, semNo);
+}
+
+////////////////////////////////////////////////////////////
+int sysV(int semNo) {
+    return syscall(SYS_V, semNo);
+}
+
+////////////////////////////////////////////////////////////
+unsigned int syssleep(unsigned int milliseconds) {
+    return syscall(SYS_SLEEP, milliseconds);
+}
+
+////////////////////////////////////////////////////////////
 int sysgetcputimes(processStatuses *ps) {
-  return syscall(SYS_CPUTIMES, ps);
+    return syscall(SYS_CPUTIMES, ps);
 }

@@ -98,6 +98,10 @@ static void kbmputc( unsigned char c )
 	unsigned short		was;
 	unsigned char		*cp;
 	static unsigned char	*crtat = 0;
+    
+#if defined IS_DEBUG || defined TEST || defined CONSOLE_PRINTING
+    outb(0xe9, c);
+#endif
 
 	if (c == 0)
 		return;

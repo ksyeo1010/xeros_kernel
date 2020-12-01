@@ -29,3 +29,6 @@ plugin_ctrl: speaker=0
 
 # If the above doesn't work then try uncommenting the line below
 #sound: driver=dummy  
+
+# save output to log
+port_e9_hack: enabled=1

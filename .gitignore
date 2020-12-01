@@ -70,3 +70,9 @@ boot/zImage
 compile/xeros
 bochsrc
 
+# extra
+*.pdf
+.vscode
+.idea
+snapshot.txt
+output.txt

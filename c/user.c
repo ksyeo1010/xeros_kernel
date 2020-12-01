@@ -159,7 +159,7 @@ void     root( void ) {
     syskill(pids[1]);
     sysyield();
 
-    syssleep(8000);;
+    syssleep(8000);
 
 
 
@@ -269,4 +269,3 @@ void     root( void ) {
     }
     
 }
-

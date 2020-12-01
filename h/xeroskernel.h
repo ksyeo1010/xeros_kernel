@@ -3,6 +3,45 @@
 #ifndef XEROSKERNEL_H
 #define XEROSKERNEL_H
 
+/* includes */
+#include <mem.h>
+#include <pcb.h>
+
+/* defines for testing */
+
+// #define TEST /* Comment/Uncomment this line for testing. */
+#ifdef TEST
+
+/* run the test based on test case */
+extern void run_test(void);
+
+#endif
+
+/* Console Printing */
+#define CONSOLE_PRINTING /* Comment/Uncomment this line to print on console */
+
+/* For Debugging ONLY */
+// #define IS_DEBUG /* Comment/Uncomment this line to print DEBUG messages */
+#ifdef IS_DEBUG
+// from https://piazza.com/class/keulh3m6vuj47c?cid=46
+#define PRINT(...) do {\
+    __asm __volatile("cli":::);\
+    kprintf("%s \n\t%s:%d: ",\
+        __func__, __FILE__, __LINE__);\
+    kprintf(__VA_ARGS__);\
+} while(0)
+#define FAIL(...) do {\
+    __asm __volatile("cli":::);\
+    kprintf("%s failed:\n\t%s:%d: ",\
+        __func__, __FILE__, __LINE__);\
+    kprintf(__VA_ARGS__);\
+    __asm __volatile("hlt":::);\
+} while(0)
+#else
+    #define PRINT(...) ((void)0)
+    #define FAIL(...) ((void)0)
+#endif
+
 /* Symbolic constants used throughout gutted Xinu */
 
 typedef	char    Bool;        /* Boolean type                  */
@@ -10,23 +49,17 @@ typedef unsigned int size_t; /* Something that can hold the value of
                               * theoretical maximum number of bytes 
                               * addressable in this architecture.
                               */
-
-typedef unsigned int PID_t;  // What a process ID is defined to be
-
 #define	FALSE   0       /* Boolean constants             */
 #define	TRUE    1
 #define	EMPTY   (-1)    /* an illegal gpq                */
 #define	NULL    0       /* Null pointer for linked lists */
 #define	NULLCH '\0'     /* The null character            */
 
-#define CREATE_FAILURE -1  /* Process creation failed     */
-
-
-
 
 /* Universal return constants */
 
 #define	OK            1         /* system call ok               */
+#define SYSOK         0         /* system ok                    */
 #define	SYSERR       -1         /* system call failed           */
 #define	EOF          -2         /* End-of-file (usu. from read)	*/
 #define	TIMEOUT      -3         /* time out  (usu. recvtim)     */
@@ -34,6 +67,15 @@ typedef unsigned int PID_t;  // What a process ID is defined to be
                                 /*  (usu. defined as ^B)        */
 #define	BLOCKERR     -5         /* non-blocking op would block  */
 #define LASTCONST    -5
+
+/* Succeed and Failed */
+#define FAILED          0       /* Failed to do a function */
+#define SUCCEED         1       /* Succeed in doing a function */
+#define BLOCKED         2       /* Blocked state for semaphore */
+
+/* Tick values */
+#define PIT_VALUE       100
+#define TICK_SPLIT      (1000/PIT_VALUE)
 
 /* Functions defined by startup code */
 
@@ -47,148 +89,265 @@ void           init8259(void);
 int            kprintf(char * fmt, ...);
 void           lidt(void);
 void           outb(unsigned int, unsigned char);
-
-
-/* Some constants involved with process creation and managment */
- 
-   /* Maximum number of processes */      
-#define MAX_PROC        64           
-   /* Kernel trap number          */
-#define KERNEL_INT      84
-   /* Interrupt number for the timer */
-#define TIMER_INT      (TIMER_IRQ + 32)
-   /* Minimum size of a stack when a process is created */
-#define PROC_STACK      (4096 * 4)    
-              
-   /* Number of milliseconds in a tick */
-#define MILLISECONDS_TICK 10        
-
-
-/* Constants to track states that a process is in */
-#define STATE_STOPPED   0
-#define STATE_READY     1
-#define STATE_SLEEP     22
-#define STATE_RUNNING   23
-
-/* System call identifiers */
-#define SYS_STOP        20
-#define SYS_YIELD       21
-#define SYS_CREATE      22
-
-#define SYS_TIMER       233
-#define SYS_GETPID      244
-#define SYS_PUTS        255
-#define SYS_SLEEP       266
-#define SYS_KILL        277
-#define SYS_CPUTIMES    278
-#define SYS_P           300
-#define SYS_V           301
-
-
-/* Structure to track the information associated with a single process */
-
-typedef struct struct_pcb pcb;
-struct struct_pcb {
-  void        *esp;    /* Pointer to top of saved stack           */
-  pcb         *next;   /* Next process in the list, if applicable */
-  pcb         *prev;   /* Previous proccess in list, if applicable*/
-  int          state;  /* State the process is in, see above      */
-  PID_t        pid;    /* The process's ID                        */
-  int          ret;    /* Return value of system call             */
-                       /* if process interrupted because of system*/
-                       /* call                                    */
-  long         args;   
-  unsigned int otherpid;
-  void        *buffer;
-  int          bufferlen;
-  int          sleepdiff;
-  long         cpuTime;  /* CPU time consumed                     */
-};
-
-
-typedef struct struct_ps processStatuses;
-struct struct_ps {
-  int     entries;            // Last entry used in the table
-  PID_t   pid[MAX_PROC];      // The process ID
-  int     status[MAX_PROC];   // The process status
-  long    cpuTime[MAX_PROC]; // CPU time used in milliseconds
-};
-
-
-/* The actual space is set aside in create.c */
-extern pcb     proctab[MAX_PROC];
-
-#pragma pack(1)
-
-/* What the set of pushed registers looks like on the stack */
-typedef struct context_frame {
-  unsigned long        edi;
-  unsigned long        esi;
-  unsigned long        ebp;
-  unsigned long        esp;
-  unsigned long        ebx;
-  unsigned long        edx;
-  unsigned long        ecx;
-  unsigned long        eax;
-  unsigned long        iret_eip;
-  unsigned long        iret_cs;
-  unsigned long        eflags;
-  unsigned long        stackSlots[];
-} context_frame;
-
-
-/* Memory mangement system functions, it is OK for user level   */
-/* processes to call these.                                     */
-
-int      kfree(void *ptr);
-void     kmeminit( void );
-void     *kmalloc( size_t );
-
-
-/* A typedef for the signature of the function passed to syscreate */
-typedef void    (*funcptr)(void);
-
-
-/* Internal functions for the kernel, applications must never  */
-/* call these.  You can modify the interfaces if needed.       */
-void     dispatch( void );
-void     dispatchinit( void );
-void     ready( pcb *p );
-pcb      *next( void );
-void     contextinit( void );
-int      contextswitch( pcb *p );
-int      create( funcptr fp, size_t stack );
-void     set_evec(unsigned int xnum, unsigned long handler);
-void     printCF (void * stack);  /* print the call frame */
-int      syscall(int call, ...);  /* Used in the system call stub */
-void     sleep(pcb *, unsigned int);
-void     tick( void );
-void removeFromSleep(pcb * p);
-
-
-
-/* Function prototypes for system calls as called by the application */
-
-unsigned int syscreate( funcptr fp, size_t stack );
-void         sysyield( void );
-void         sysstop( void );
-PID_t        sysgetpid( void );
-PID_t        syssleep(unsigned int);
-void         sysputs(char *str);
-int          syskill(PID_t pid);
-int          sysgetcputimes(processStatuses *ps);
-int          sysV(int);
-int          sysP(int);      
-
-/* The initial process that the system creates and schedules */
-void     root( void );
-
-
-
-
 void           set_evec(unsigned int xnum, unsigned long handler);
+
+#define STACKSIZE 8192 /* Just for testing part. */
+
+/* Memory function declarations. */
+
+/**
+ * @brief Initializes the free memory list.
+ *        Sets free memory from kernel end to HOLSTART, and HOLEEND to maxaddr.
+ */
+extern void kmeminit(void);
+
+/**
+ * @brief Allocates space to a process.
+ *        Searches the free memlist, gets a memslot from the memlist, updates
+ *        memlist with changes.
+ * 
+ * @param {size} The size to allocate.
+ * @returns The start of the memslot allocated (dataStart[0]) if availabe slot was found
+ *          0 otherwise.
+ */
+extern void *kmalloc(size_t size);
+
+/**
+ * @brief Puts a memslot back to the memlist.
+ *        Does a sanity check, puts the memslot in the correct position and
+ *        merges adjacent free list blocks.
+ * 
+ * @param {ptr} The start of the address. (dataStart[0])
+ * @returns 1 if correctly freed, 0 othersize.
+ */
+extern int kfree(void *ptr);
+
+
+/* Dispatcher function declarations  */
+
+/**
+ * @brief Initializes the pcbTable with size PCB_TABLE_SIZE and
+ *        also initializes the readyQueue.
+ *        Creates the first process, which is the idle process.
+ */
+extern void dispInit(void);
+
+/**
+ * @brief Manages the syscall events for our xeros kernel. 
+ *        Supported syscall types:
+ *        - 1. CREATE: creates the process and adds to readyQueue.
+ *        - 2. YIELD:  puts the process to the readyqueue.
+ *        - 3. STOP:   removes the process from readyqueue and puts the pcb in the
+ *                     pcb table ready to use again. (STATE = STOPPED).
+ */
+extern void dispatch(void);
+
+
+/* Context switcher function declarations */
+
+/**
+ * @brief Initializes the context switcher.
+ *        Creates and sets the SYS_CALL event number to the IDT table.
+ */
+extern void contextinit(void);
+
+/**
+ * @brief Switches the context from kernel to user and back and forth.
+ *        The INT will call the method, save the registers and return the
+ *        type of request back to the dispatcher.
+ * 
+ * @param {pcb} The current process to context switch.
+ * @returns The request type.
+ */
+extern int contextswitch(pcb_t *pcb);
+
+
+/* Create function declaration */
+
+/**
+ * @brief Creates a process and adds it to the process readyQueue.
+ *        Calls kmalloc to get a free memslot, gets a stopped pcb from the
+ *        pcb table, sets the values of the pcb. Also creates a context_frame
+ *        to save register values onto the stack for the context_switcher.
+ * 
+ * @param {func} The function pointer to create.
+ * @param {stack} The stack size to allocate.
+ * @returns SUCCEED if no errors occur, FAILED otherwise.
+ */ 
+extern int create(void (*func)(void), int stack);
+
+
+/* Semaphore function declarations */
+
+/**
+ * @brief Initiates the semaphores as well as the blocked
+ *        lists.
+ * 
+ */
+extern void seminit(void);
+
+
+/**
+ * @brief Handles the blocking part of a semaphore.
+ *        Blocks if semaphore value = 0, otherwise decrements the value
+ *        and keeps running.
+ * 
+ * @param {semNo} The number of semaphore.
+ * @param {pcb} The process to block, if it should.
+ * @returns SUCCEED if no errors occur, FAILED otherwise.
+ */
+extern int P_kern(int semNo, pcb_t *pcb);
+
+/**
+ * @brief Handles the unblocking part of a semaphore.
+ *        Unblocks if semaphore value is 0, otherwise increments the value.
+ *        The process always returns to the dispatcher.
+ * 
+ * @param {semNo} The number of semaphore.
+ * @returns SUCCEED if no errors occur, FAILED otherwise.
+ */
+extern int V_kern(int semNo);
+
+/* Sleep function declarations */
+
+/**
+ * @brief Coverts milliseconds into tick time and adds the process
+ *        into a sleep list.
+ * 
+ * @param {pcb} The process to add to sleep list.
+ * @param {milliseconds} The time to sleep the amount for.
+ */
+extern void sleep(pcb_t *pcb, unsigned int milliseconds);
+
+/**
+ * @brief Each time a TIMER_INT occurs, decrements the tick.
+ *        If the tick is 0, add all process whose tick time = 0 back
+ *        to ready queue.
+ * 
+ */
+extern void tick(void);
+
+
+/* Syscall function declaration */
+
+/**
+ * @brief Calls interrupt, to make context switch.
+ *        Sets the request type and pointer to function arguments so that
+ *        the dispatcher can handle the request type. Uses va_list to get
+ *        the pointer to the initial part of the function arguments.
+ * 
+ * @param {call} The request type.
+ * @param {...} The parameter(s) depending on the function call.
+ * @return The return value if any.
+ */
+extern int syscall(int call, ...);
+
+/**
+ * @brief Sends an int to create the current process.
+ * 
+ * @param {func} The function to create.
+ * @param {stack} The size of the stack.
+ * 
+ * @returns The return value from the function.
+ */
+extern unsigned int syscreate(void (*func)(void), int stack);
+
+/**
+ * @brief Sends an int to yield the current process.
+ */
+extern void sysyield(void);
+
+/**
+ * @brief Sends an int to stop the current process.
+ */
+extern void sysstop(void);
+
+/**
+ * @brief Sends an int to get current process id.
+ * 
+ * @returns The pid of the current running process.
+ */
+extern pid_t sysgetpid(void);
+
+/**
+ * @brief Displays a null terminated string to the screen.
+ * 
+ * @param {str} The null terminated character array.
+ */
+extern void sysputs(char *str);
+
+/**
+ * @brief Kills the process with the given pid if the pid is
+ *        not is STOPPED state. Killing the current process
+ *        will work as doing a systop on current spot.
+ * 
+ * @param {pid} The pid of the process to kill.
+ * @returns 0 if succeed, -1 otherwise.
+ */
+extern int syskill(pid_t pid);
+
+/**
+ * @brief Sets the priority of a process. If a -1 is given
+ *        just returns the current priority.
+ * 
+ * @param {priority} The priority in the range of -1 to 3.
+ * @returns The priority it had if succeed, -1 otherwise.
+ */
+extern int syssetprio(int priority);
+
+/**
+ * @brief Sends a system call to handle the P_kern in the kernel.
+ *        The process is blocked if semaphore value = 0;
+ * 
+ * @param {semNo} The number of semaphore to block the process.
+ * @returns 1 if succeed, 0 otherwise.
+ */
+extern int sysP(int semNo);
+
+/**
+ * @brief Sends a system call to handle the V_kern in the kernel.
+ *        The process with highest priority is added to the ready queue.
+ *        If there are no process, semaphore value is increased by 1.
+ * 
+ * @param {semNo} The number of semaphore to unblock the process.
+ * @returns 1 if succeed, 0 otherwise.
+ */
+extern int sysV(int semNo);
+
+/**
+ * @brief Puts the process to sleep given in milliseconds.
+ * 
+ * @param {milliseconds} The time to sleep.
+ * @returns 0 if 
+ */
+extern unsigned int syssleep(unsigned int milliseconds);
+
+/**
+ * @brief For each process, record the pid, current state and milliseconds
+ *        charged to the process.
+ *        IDLE process is always recorded.
+ * 
+ * @param {ps} The process statuses.
+ * @return -1 if address is in the hole, -2 if the structure goes beyond maxaddr,
+ *         otherwise the last element starting from 0.
+ */
+extern int sysgetcputimes(processStatuses *ps);
+
+/* root function declarations */
+
+/**
+ * @brief The root process to run when the kernel is initalized.
+ *        Other syscalls are done through this function.
+ */
+extern void root(void);
+
+/* idle process declaration */
+
+/**
+ * @brief The idle process. Does infinite amount of hlt executions.
+ */
+extern void idleproc(void);
 
 
 /* Anything you add must be between the #define and this comment */
 #endif
-

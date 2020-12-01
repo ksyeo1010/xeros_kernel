@@ -9,23 +9,6 @@ extern	int	end( void );    /* end of kernel image, use &end        */
 extern  long	freemem; 	/* start of free memory (set in i386.c) */
 extern char	*maxaddr;	/* max memory address (set in i386.c)	*/
 
-
-
-/*------------------------------------------------------------------------
- *  The idle process 
- *------------------------------------------------------------------------
- */
-static void idleproc( void )	
-{
-    int	i;
-    //    kprintf("I");
-    for( i = 0; ; i++ ) {
-       sysyield();
-    }
-}
-
-
-
 /************************************************************************/
 /***				NOTE:				      ***/
 /***								      ***/
@@ -42,46 +25,70 @@ static void idleproc( void )
  */
 void initproc( void )				/* The beginning */
 {
-  kprintf( "\n\nCPSC 415, 2020W1\n32 Bit Xeros -21.9.9 - Closer to beta \nLocated at: %x to %x\n", 
-	   &entry, &end); 
   
-  /* Your code goes here */
-  
-  kprintf("Max addr is %d %x\n", maxaddr, maxaddr);
-  
-  kmeminit();
-  kprintf("memory inited\n");
-  
-  dispatchinit();
-  kprintf("dispatcher inited\n");
-  
-  contextinit();
-  kprintf("context inited\n");
-  
+    char str[1024];
+    int a = sizeof(str);
+    int b = -17;
+    int i; 
 
-  // WARNING THE FIRST PROCESS CREATED MUST BE THE IDLE PROCESS.
-  // See comments in create.c
-  
-  // Note that this idle process gets a regular time slice but
-  // according to the A2 specs it should only get a time slice when
-  // there are no other processes available to run. This approach 
-  // works, but will give the idle process a time slice when other 
-  // processes are available for execution and thereby needlessly waste
-  // CPU resources that could be used by user processes. This is 
-  // somewhat migigated by the immediate call to sysyield()
-  kprintf("Creating Idle Process\n");
+    kprintf( "\n\nCPSC 415, 2020W1\n32 Bit Xeros -20.9.9 - Closer to beta \nLocated at: %x to %x\n", 
+        &entry, &end); 
 
-  create(idleproc, PROC_STACK);
-  
-  create( root, PROC_STACK );
-  kprintf("create inited\n");
-  
-  dispatch();
-  
-  
-  kprintf("Returned to init, you should never get here!\n");
-  
-  /* This code should never be reached after you are done */
-  for(;;) ; /* loop forever */
+    kprintf("Some sample output to illustrate different types of printing\n\n");
+
+    /* A busy wait to pause things on the screen, Change the value used 
+        in the termination condition to control the pause
+    */
+
+    for (i = 0; i < 3000000; i++);
+
+    /* Build a string to print) */
+    sprintf(str, 
+        "This is the number -17 when printed signed %d unsigned %u hex %x and a string %s.\n      Sample printing of 1024 in signed %d, unsigned %u and hex %x.",
+        b, b, b, "Hello", a, a, a);
+
+    /* Print the string */
+
+    kprintf("\n\nThe %dstring is: \"%s\"\n\nThe formula is %d + %d = %d.\n\n\n", 
+        a, str, a, b, a + b);
+
+    for (i = 0; i < 4000000; i++);
+    /* or just on its own */
+    kprintf(str);
+
+    /* Add your code below this line and before next comment */
+    kprintf("\n\n");
+
+    // init memory
+    kmeminit();
+    // init dispatcher
+    dispInit();
+    // init context switcher
+    contextinit();
+    // init semaphore
+    seminit();
+
+    // create idleprocess, first process every created
+    create(idleproc, STACKSIZE);
+    
+#ifdef TEST
+    // run test
+    run_test();
+#else
+    // init root function
+    create(root, STACKSIZE);
+#endif
+
+    // dispatcher
+    dispatch();
+    
+
+    for (i = 0; i < 2000000; i++);
+    /* Add all of your code before this comment and after the previous comment */
+    /* This code should never be reached after you are done */
+    kprintf("\n\nWhen your  kernel is working properly ");
+    kprintf("this line should never be printed!\n");
+    for(;;) ; /* loop forever */
 }
+
 

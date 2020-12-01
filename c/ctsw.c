@@ -1,109 +1,72 @@
 /* ctsw.c : context switcher
  */
 
-#include <xeroskernel.h>
 #include <i386.h>
+#include <xeroskernel.h>
 
-
-void _KernelEntryPoint(void);
+void _ISREntryPoint(void);      /* code to run when interrupt happens */
 void _TimerEntryPoint(void);
+static void *k_stack;           /* the k_stack pointer */
+static unsigned long *esp;      /* the esp pointer */
+static int rc;
+static int interrupt;
+static int calltype;
+static unsigned long *args;     /* the args pointer */
 
-static void               *saveESP;
-static unsigned int        rc;
-static int                 trapNo;
-static long                args;
+////////////////////////////////////////////////////////////
+void contextinit() {
+    set_evec(SYS_CALL, (unsigned long) _ISREntryPoint);
+    set_evec(IRQBASE, (unsigned long) _TimerEntryPoint);
 
-int contextswitch( pcb *p ) {
-/**********************************/
-
-    /* keep every thing on the stack to simplfiy gcc's gesticulations
-     */
-
-    saveESP = p->esp;
-    rc = p->ret; 
- 
-    /* In the assembly code, switching to process
-     * 1.  Push eflags and general registers on the stack
-     * 2.  Load process's return value into eax
-     * 3.  load processes ESP into edx, and save kernel's ESP in saveESP
-     * 4.  Set up the process stack pointer
-     * 5.  store the return value on the stack where the processes general
-     *     registers, including eax has been stored.  We place the return
-     *     value right in eax so when the stack is popped, eax will contain
-     *     the return value
-     * 6.  pop general registers from the stack
-     * 7.  Do an iret to switch to process
-     *
-     * Switching to kernel
-     * 1.  Push regs on stack, set ecx to 1 if timer interrupt, jump to common
-     *     point.
-     * 2.  Store request code in ebx
-     * 3.  exchange the process esp and kernel esp using saveESP and eax
-     *     saveESP will contain the process's esp
-     * 4a. Store the request code on stack where kernel's eax is stored
-     * 4b. Store the timer interrupt flag on stack where kernel's eax is stored
-     * 4c. Store the the arguments on stack where kernel's edx is stored
-     * 5.  Pop kernel's general registers and eflags
-     * 6.  store the request code, trap flag and args into variables
-     * 7.  return to system servicing code
-     */
- 
-    __asm __volatile( " \
-        pushf \n\
-        pusha \n\
-        movl    rc, %%eax    \n\
-        movl    saveESP, %%edx    \n\
-        movl    %%esp, saveESP    \n\
-        movl    %%edx, %%esp \n\
-        movl    %%eax, 28(%%esp) \n\
-        popa \n\
-        iret \n\
-   _TimerEntryPoint: \n\
-        cli   \n\
-        pusha \n\
-        movl    $1, %%ecx \n\
-        jmp     _CommonJumpPoint \n \
-   _KernelEntryPoint: \n\
-        cli \n\
-        pusha  \n\
-        movl   $0, %%ecx \n\
-   _CommonJumpPoint: \n \
-        movl    %%eax, %%ebx \n\
-        movl    saveESP, %%eax  \n\
-        movl    %%esp, saveESP  \n\
-        movl    %%eax, %%esp  \n\
-        movl    %%ebx, 28(%%esp) \n\
-        movl    %%ecx, 24(%%esp)\n		\
-        movl    %%edx, 20(%%esp) \n\
-        popa \n\
-        popf \n\
-        movl    %%eax, rc \n\
-        movl    %%ecx, trapNo \n\
-        movl    %%edx, args \n\
-        "
-        : 
-        : 
-        : "%eax", "%ebx", "%edx"
-    );
-
-    /* save esp and read in the arguments
-     */
-    p->esp = saveESP;
-    if( trapNo ) {
-	/* return value (eax) must be restored, (treat it as return value) */
-	p->ret = rc;
-	rc = SYS_TIMER;
-    } else {
-        p->args = args;
-    }
-    return rc;
+    initPIT(PIT_VALUE);
 }
 
-void contextinit( void ) {
-/*******************************/
-  kprintf("Context init called\n");
-  set_evec( KERNEL_INT, (int) _KernelEntryPoint );
-  set_evec( TIMER_INT,  (int) _TimerEntryPoint );
-  initPIT( 100 );
+////////////////////////////////////////////////////////////
+int contextswitch(pcb_t* pcb) {
+    esp = (unsigned long *) pcb->esp;
+    rc = pcb->rc;
+    __asm __volatile("          \
+        pushf                   \n\
+        pusha                   \n\
+        movl rc, %%eax          \n\
+        movl %%esp, k_stack     \n\
+        movl esp, %%esp         \n\
+        movl %%eax, 28(%%esp)   \n\
+        popa                    \n\
+        iret                    \n\
+    _TimerEntryPoint:           \n\
+        cli                     \n\
+        pusha                   \n\
+        movl $1, %%ecx          \n\
+        jmp _CommonJump         \n\
+    _ISREntryPoint:             \n\
+        cli                     \n\
+        pusha                   \n\
+        movl $0, %%ecx          \n\
+    _CommonJump:                \n\
+        movl %%esp, esp         \n\
+        movl k_stack, %%esp     \n\
+        movl %%eax, rc          \n\
+        movl %%ecx, interrupt   \n\
+        movl %%edx, args        \n\
+        popa                    \n\
+        popf                    \n\
+        "
+        : 
+        :
+        : "%eax", "%ecx", "%edx"
+    );
 
+    // if it is system time out
+    if (interrupt == 1) {
+        calltype = TIMER_INT;
+        pcb->rc = rc;
+    } else {
+        calltype = rc;
+    }
+
+    (void)k_stack; // ignore compiler warning
+    pcb->esp = (unsigned long) esp;
+    pcb->args = (unsigned long) args;
+    return calltype;
 }
