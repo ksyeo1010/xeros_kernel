@@ -3,6 +3,7 @@
  */
 
 #include <xeroskernel.h>
+#include <pcb.h>
 
 #define NUM_SEMAPHORES 2    /* Number of semaphores in our system. */
 

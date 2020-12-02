@@ -2,6 +2,8 @@
  */
 
 #include <xeroskernel.h>
+#include <xeroslib.h>
+#include <pcb.h>
 
 /* Declarations */
 

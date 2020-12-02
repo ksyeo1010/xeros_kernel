@@ -1,6 +1,7 @@
 /* memHeader.c */
 
 #include <xeroskernel.h>
+#include <mem.h>
 
 /* Helper function decalrations */
 

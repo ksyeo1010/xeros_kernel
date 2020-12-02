@@ -5,6 +5,7 @@
 #include <xeroskernel.h>
 #include <xeroslib.h>
 #include <i386.h>
+#include <pcb.h>
 
 extern char * maxaddr;
 

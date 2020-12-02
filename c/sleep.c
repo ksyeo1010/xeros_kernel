@@ -3,6 +3,7 @@
 
 #include <xeroskernel.h>
 #include <xeroslib.h>
+#include <pcb.h>
 
 static pcb_t *dl = NULL;
 
@@ -10,7 +11,6 @@ static pcb_t *dl = NULL;
 void sleep(pcb_t *pcb, unsigned int milliseconds) {
     unsigned int tick;
     pcb_t *p;
-    pcb_t *prev;
 
     // set tick
     tick = (milliseconds/TICK_SPLIT) + ((milliseconds%TICK_SPLIT)?1:0);

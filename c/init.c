@@ -67,6 +67,8 @@ void initproc( void )				/* The beginning */
     contextinit();
     // init semaphore
     seminit();
+    // init devices
+    devinit();
 
     // create idleprocess, first process every created
     create(idleproc, STACKSIZE);

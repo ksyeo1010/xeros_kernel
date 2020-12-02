@@ -3,6 +3,7 @@
 
 #include <i386.h>
 #include <xeroskernel.h>
+#include <mem.h>
 
 /* variable declarations */
 extern long freemem; /* free memory start */

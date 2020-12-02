@@ -2,6 +2,7 @@
 
 #include <xeroskernel.h>
 #include <xeroslib.h>
+#include <pcb.h>
 
 /* priority queues declarations */
 static pcb_t *head[PQ_SIZE];

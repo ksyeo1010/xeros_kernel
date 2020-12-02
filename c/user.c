@@ -35,13 +35,27 @@ void producer(void) {
 }
 
 void root(void) {
-
+    int fd;
+    int len;
+    char out[1024];
+    char buf[1024] = {'a', 'b', 'c', 'd', 'e'};
     sysputs("Welcome to Xeros 415 - A not very secure Kernel.\n");
 
-    syscreate(producer, STACKSIZE);
+    fd = sysopen(0);
+    sysputs(buf);
+    sysread(fd, buf, 5);
+    sysputs(buf);
+    sysclose(fd);
 
-    syssleep(1000);
+    fd = sysopen(1);
+    len = sysread(fd, buf, 3);
+    sprintf(out, "Length: %d, val: %d\n", len, buf);
+    sysputs(out);
 
-    syskill(2, 5);
+    sysioctl(fd, 32, 22);
+    len = sysread(fd, buf, 3);
+    sprintf(out, "Length: %d, val: %d\n", len, buf);
+    sysputs(out);
 
+    sysclose(fd);
 }

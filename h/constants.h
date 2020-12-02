@@ -1,0 +1,142 @@
+/* constants.h */
+
+#ifndef CONSTANTS_H
+#define CONSTANTS_H
+
+// kernel calls
+#define SYS_CALL        0x31        /* general call to idt */
+
+// syscall identifiers
+#define SYS_CREATE          0x10        /* create process block */
+#define SYS_YIELD           0x11        /* set current process to the end of queue */
+#define SYS_STOP            0x12        /* remove process from ready queue */
+#define SYS_GETPID          0x13        /* gets the pid of the current process */
+#define SYS_PUTS            0x14        /* displays null terminated string to screen */
+#define SYS_KILL            0x15        /* kills the process given pid */
+#define SYS_SETPRIO         0x16        /* sets the priority of the process */
+#define SYS_P               0x17        /* blocks process in a semaphore */
+#define SYS_V               0x18        /* unblocks process in a semaphore */
+#define SYS_SLEEP           0x19        /* sleeps the process given amount of time */
+#define TIMER_INT           0x20        /* The timer int value */
+#define SYS_CPUTIMES        0x21
+#define SYS_SIGNAL          0x60
+#define SYS_SIGRETURN       0x61
+#define SYS_WAIT            0x62
+#define SYS_OPEN            0x80
+#define SYS_CLOSE           0x81
+#define SYS_WRITE           0x82
+#define SYS_READ            0x83
+#define SYS_IOCTL           0x84
+
+// process states
+#define STATE_STOPPED       0       /* process stopped state */
+#define STATE_RUNNING       1       /* process running state */
+#define STATE_READY         2       /* process ready state */
+#define STATE_BLOCKED       3       /* process blocked state */
+#define STATE_SLEEP         4       /* process sleep state */
+#define STATE_WAITING       5
+
+// signal return values
+#define SIG_OK               0
+#define SIG_FAIL            -1
+#define SIG_EINTR           -777
+#define SIG_NOT_EXISTS      -999
+
+// device return values
+#define DEV_FAIL            -1
+#define DEV_OK              0
+
+// process table size
+#define PCB_TABLE_SIZE      64
+
+// priority queue size
+#define PQ_SIZE             4
+
+// signal table size
+#define SIG_TABLE_SIZE      32
+
+// fd table size
+#define FD_TABLE_SIZE       4
+
+// define pid type
+typedef unsigned int pid_t;
+
+// signal handler type
+typedef void (*sighandler_t)(void *);
+
+// FD structure
+typedef struct fd_struct {
+    struct devsw_struct *dev;
+} fd_t;
+
+// Process control block
+typedef struct process_control_block {
+    pid_t pid;                              /* The pid of the process */ 
+    int state;                              /* The state of the process */
+    int rc;                                 /* The return value */
+    int priority;                           /* The priority of the process */
+    int semNo;
+    int sig_mask;
+    int sig_ignored;
+    int          bufferlen;
+    void        *buffer;
+    long         cpuTime;                   /* CPU time consumed                     */
+    unsigned int otherpid;
+    unsigned int tick;                      /* The current tick of a process */
+    unsigned long esp;                      /* The stack pointer of the process */
+    unsigned long addr_start;               /* The initial address of the process */
+    unsigned long args;                     /* The pointer to the arguments in the stack */
+    struct process_control_block *next;     /* The next pcb in the queue if any */
+    struct process_control_block *prev;
+    struct process_control_block *wait_head;
+    struct process_control_block *wait_tail;
+    struct process_control_block *waiting_on;
+    sighandler_t sigTable[SIG_TABLE_SIZE];
+    fd_t fdt[FD_TABLE_SIZE];
+} pcb_t;
+
+typedef struct struct_ps processStatuses;
+struct struct_ps {
+  int     entries;                  // Last entry used in the table
+  pid_t   pid[PCB_TABLE_SIZE];      // The process ID
+  int     status[PCB_TABLE_SIZE];   // The process status
+  long    cpuTime[PCB_TABLE_SIZE];  // CPU time used in milliseconds
+};
+
+// Context frame structure
+typedef struct context_frame {
+    unsigned long edi;
+    unsigned long esi;
+    unsigned long ebp;
+    unsigned long esp;
+    unsigned long ebx;
+    unsigned long edx;
+    unsigned long ecx;
+    unsigned long eax;
+    unsigned long iret_eip;
+    unsigned long iret_cs;
+    unsigned long eflags;
+    unsigned long free_slots[];
+} cf_t;
+
+// signal context frame
+typedef struct signal_context_frame {
+    struct context_frame ctx;
+    unsigned long returnAddr;
+    unsigned long handlerAddr;
+    unsigned long contextFramePtr;
+    unsigned long prevSigNum;
+} sigframe_t;
+
+// device structure
+typedef struct devsw_struct {
+    int dvnum;
+    char *dvname;
+    int (*dvopen)(pcb_t *);
+    int (*dvclose)(pcb_t *);
+    int (*dvread)(pcb_t *, void *, int);
+    int (*dvwrite)(pcb_t *, void *, int);
+    int (*dvioctl)(pcb_t *, unsigned long, void *);
+} devsw;
+
+#endif

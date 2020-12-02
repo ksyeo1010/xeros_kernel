@@ -3,9 +3,7 @@
 #ifndef XEROSKERNEL_H
 #define XEROSKERNEL_H
 
-/* includes */
-#include <mem.h>
-#include <pcb.h>
+#include <constants.h>
 
 /* defines for testing */
 
@@ -396,6 +394,9 @@ extern void root(void);
  * @brief The idle process. Does infinite amount of hlt executions.
  */
 extern void idleproc(void);
+
+
+extern void devinit(void);
 
 
 /* Anything you add must be between the #define and this comment */

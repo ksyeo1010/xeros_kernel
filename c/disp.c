@@ -4,6 +4,8 @@
 #include <xeroskernel.h>
 #include <stdarg.h>
 #include <i386.h>
+#include <pcb.h>
+#include <di_calls.h>
 
 /* declarations for getting CPU times */
 extern char * maxaddr;
@@ -28,6 +30,10 @@ void dispatch() {
     int priority;                   /* the priority to set */
     int semNo;                      /* the semaphore number arg */
     unsigned int milliseconds;      /* the milliseconds arg */
+    int fd;
+    void *buffer;
+    int bufferlen;
+    unsigned long command;
 
     // the next process. Should be the idle process.
     pcb = next();
@@ -129,6 +135,32 @@ void dispatch() {
                 pcb = next();
                 break;
             case SYS_OPEN:
+                ap = (va_list) pcb->args;
+                pcb->rc = di_open(pcb, va_arg(ap, int));
+                break;
+            case SYS_CLOSE:
+                ap = (va_list) pcb->args;
+                pcb->rc = di_close(pcb, va_arg(ap, int));
+                break;
+            case SYS_WRITE:
+                ap = (va_list) pcb->args;
+                fd = va_arg(ap, int);
+                buffer = va_arg(ap, void*);
+                bufferlen = va_arg(ap, int);
+                pcb->rc = di_write(pcb, fd, buffer, bufferlen);
+                break;
+            case SYS_READ:
+                ap = (va_list) pcb->args;
+                fd = va_arg(ap, int);
+                buffer = va_arg(ap, void*);
+                bufferlen = va_arg(ap, int);
+                pcb->rc = di_read(pcb, fd, buffer, bufferlen);
+                break;
+            case SYS_IOCTL:
+                ap = (va_list) pcb->args;
+                fd = va_arg(ap, int);
+                command = va_arg(ap, unsigned long);
+                pcb->rc = di_ioctl(pcb, fd, command, va_arg(ap, void *));
                 break;
         }
     }
