@@ -53,8 +53,8 @@ void sysputs(char *str) {
 }
 
 ////////////////////////////////////////////////////////////
-int syskill(pid_t pid) {
-    return syscall(SYS_KILL, pid);
+int syskill(pid_t pid, int signalNumber) {
+    return syscall(SYS_KILL, pid, signalNumber);
 }
 
 ////////////////////////////////////////////////////////////
@@ -80,4 +80,16 @@ unsigned int syssleep(unsigned int milliseconds) {
 ////////////////////////////////////////////////////////////
 int sysgetcputimes(processStatuses *ps) {
     return syscall(SYS_CPUTIMES, ps);
+}
+
+sighandler_t syssignal(int signum, sighandler_t handler) {
+    return (sighandler_t) syscall(SYS_SIGNAL, signum, handler);
+}
+
+void syssigreturn(void *cntxPtr) {
+    syscall(SYS_SIGRETURN, cntxPtr);
+}
+
+int syswait(pid_t pid) {
+    return syscall(SYS_WAIT, pid);
 }

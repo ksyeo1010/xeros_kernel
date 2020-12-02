@@ -31,7 +31,7 @@ int create(void (*func)(void), int stack) {
     }
 
     // set cf values
-    cf = (cf_t *) (addr_end - sizeof(cf_t));
+    cf = (cf_t *) (addr_end - sizeof(cf_t) - 4);
     cf->esp = cf->eflags;
     cf->ebp = cf->esp;
     cf->iret_eip = (unsigned long) func;
@@ -45,11 +45,13 @@ int create(void (*func)(void), int stack) {
     pcb->pid = pcb_id++;
     pcb->esp = (unsigned long) cf;
     pcb->addr_start = (unsigned long) addr;
-    pcb->next = NULL;
     pcb->cpuTime = 0;
     pcb->priority = 3;
-    PRINT("PCB Stats, pid: %d, pstate: %d, pesp: %d, max_addr: %d\n",
-        pcb->pid, pcb->state, pcb->esp, addr_end);
+    pcb->semNo = -1;
+    pcb->sig_mask = 0xFFFFFFFF;
+    memset(pcb->sigTable, 0, sizeof(pcb->sigTable);
+    PRINT("PCB Stats, pid: %d, pstate: %d, pesp: %d, addr_start:%d, max_addr: %d\n",
+        pcb->pid, pcb->state, pcb->esp, pcb->addr_start, addr_end);
 
     // add to ready queue
     ready(pcb);

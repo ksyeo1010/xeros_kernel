@@ -23,8 +23,8 @@ void dispatch() {
     void *func;                     /* function pointer to pass when create */
     int stack;                      /* size to pass when create */
     char *str;                      /* store string to print to screen */
-    pid_t pid;                      /* the pcb id to kill */
-    pcb_t *pcb_k;                   /* the pcb pointer to kill */
+    pid_t pid;
+    int signum;
     int priority;                   /* the priority to set */
     int semNo;                      /* the semaphore number arg */
     unsigned int milliseconds;      /* the milliseconds arg */
@@ -47,6 +47,7 @@ void dispatch() {
                 pcb = next();
                 break;
             case SYS_STOP:
+                restoreToReadyQueue(pcb);
                 cleanup(pcb);
                 pcb = next();
                 break;
@@ -61,27 +62,7 @@ void dispatch() {
             case SYS_KILL:
                 ap = (va_list) pcb->args;
                 pid = va_arg(ap, pid_t);
-
-                pcb_k = getPCB(pid);
-                if (pcb_k == NULL) {
-                    // if no such pcb with pid
-                    pcb->rc = SYSERR;
-                } else if (pcb_k->state == STATE_STOPPED) {
-                    // if process was killed already
-                    pcb->rc = SYSERR;
-                } else if (pcb->pid == 0) {
-                    // if process is idle
-                    pcb->rc = SYSERR;
-                } else {
-                    // if this is current process move to next process
-                    if (pcb_k->pid == pcb->pid) {
-                        pcb->rc = -2;
-                    } else {
-                        pcb->rc = removeFromQueue(pcb_k);
-                        // cleanup process
-                        cleanup(pcb_k);
-                    }
-                }
+                pcb->rc = signal(pid, va_arg(ap, int));
                 break;
             case SYS_SETPRIO:
                 ap = (va_list) pcb->args;
@@ -122,9 +103,23 @@ void dispatch() {
                 sleep(pcb, milliseconds);
                 pcb = next();
                 break;
-            case (SYS_CPUTIMES):
+            case SYS_CPUTIMES:
                 ap = (va_list) pcb->args;
                 pcb->rc = getCPUtimes(pcb, va_arg(ap, processStatuses *));
+                break;
+            case SYS_SIGNAL:
+                ap = (va_list) pcb->args;
+                signum = va_arg(ap, int);
+                pcb->rc = (int) set_signal(pcb, signum, va_arg(ap, sighandler_t));
+                break;
+            case SYS_SIGRETURN:
+                ap = (va_list) pcb->args;
+                pcb->esp = (unsigned long) va_arg(ap, void *);
+                break;
+            case SYS_WAIT:
+                ap = (va_list) pcb->args;
+                pcb->rc = addToWaitQueue(pcb, va_arg(ap, pid_t));
+                pcb = next();
                 break;
         }
     }

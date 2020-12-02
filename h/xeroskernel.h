@@ -21,18 +21,18 @@ extern void run_test(void);
 #define CONSOLE_PRINTING /* Comment/Uncomment this line to print on console */
 
 /* For Debugging ONLY */
-// #define IS_DEBUG /* Comment/Uncomment this line to print DEBUG messages */
+#define IS_DEBUG /* Comment/Uncomment this line to print DEBUG messages */
 #ifdef IS_DEBUG
 // from https://piazza.com/class/keulh3m6vuj47c?cid=46
 #define PRINT(...) do {\
     __asm __volatile("cli":::);\
-    kprintf("%s \n\t%s:%d: ",\
+    kprintf("    %s \n\t%s:%d: ",\
         __func__, __FILE__, __LINE__);\
     kprintf(__VA_ARGS__);\
 } while(0)
 #define FAIL(...) do {\
     __asm __volatile("cli":::);\
-    kprintf("%s failed:\n\t%s:%d: ",\
+    kprintf("    %s failed:\n\t%s:%d: ",\
         __func__, __FILE__, __LINE__);\
     kprintf(__VA_ARGS__);\
     __asm __volatile("hlt":::);\
@@ -71,7 +71,7 @@ typedef unsigned int size_t; /* Something that can hold the value of
 /* Succeed and Failed */
 #define FAILED          0       /* Failed to do a function */
 #define SUCCEED         1       /* Succeed in doing a function */
-#define BLOCKED         2       /* Blocked state for semaphore */
+#define BLOCKED        -1       /* Blocked state for semaphore */
 
 /* Tick values */
 #define PIT_VALUE       100
@@ -93,7 +93,9 @@ void           set_evec(unsigned int xnum, unsigned long handler);
 
 #define STACKSIZE 8192 /* Just for testing part. */
 
+/* ========================================================================== */
 /* Memory function declarations. */
+/* ========================================================================== */
 
 /**
  * @brief Initializes the free memory list.
@@ -122,8 +124,9 @@ extern void *kmalloc(size_t size);
  */
 extern int kfree(void *ptr);
 
-
+/* ========================================================================== */
 /* Dispatcher function declarations  */
+/* ========================================================================== */
 
 /**
  * @brief Initializes the pcbTable with size PCB_TABLE_SIZE and
@@ -142,8 +145,9 @@ extern void dispInit(void);
  */
 extern void dispatch(void);
 
-
+/* ========================================================================== */
 /* Context switcher function declarations */
+/* ========================================================================== */
 
 /**
  * @brief Initializes the context switcher.
@@ -161,8 +165,9 @@ extern void contextinit(void);
  */
 extern int contextswitch(pcb_t *pcb);
 
-
+/* ========================================================================== */
 /* Create function declaration */
+/* ========================================================================== */
 
 /**
  * @brief Creates a process and adds it to the process readyQueue.
@@ -176,8 +181,9 @@ extern int contextswitch(pcb_t *pcb);
  */ 
 extern int create(void (*func)(void), int stack);
 
-
+/* ========================================================================== */
 /* Semaphore function declarations */
+/* ========================================================================== */
 
 /**
  * @brief Initiates the semaphores as well as the blocked
@@ -227,8 +233,9 @@ extern void sleep(pcb_t *pcb, unsigned int milliseconds);
  */
 extern void tick(void);
 
-
+/* ========================================================================== */
 /* Syscall function declaration */
+/* ========================================================================== */
 
 /**
  * @brief Calls interrupt, to make context switch.
@@ -284,7 +291,7 @@ extern void sysputs(char *str);
  * @param {pid} The pid of the process to kill.
  * @returns 0 if succeed, -1 otherwise.
  */
-extern int syskill(pid_t pid);
+extern int syskill(pid_t pid, int signalNumber);
 
 /**
  * @brief Sets the priority of a process. If a -1 is given
@@ -333,7 +340,16 @@ extern unsigned int syssleep(unsigned int milliseconds);
  */
 extern int sysgetcputimes(processStatuses *ps);
 
+
+extern sighandler_t syssignal(int signum, sighandler_t handler);
+
+extern void syssigreturn(void *cntxPtr);
+
+extern int syswait(pid_t pid);
+
+/* ========================================================================== */
 /* root function declarations */
+/* ========================================================================== */
 
 /**
  * @brief The root process to run when the kernel is initalized.

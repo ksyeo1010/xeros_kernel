@@ -39,7 +39,7 @@ int P_kern(int semNo, pcb_t *pcb) {
     semaphore_t *sp;
 
     // check semNo
-    if (semNo < 0 || semNo > NUM_SEMAPHORES) {
+    if (semNo < 0 || semNo >= NUM_SEMAPHORES) {
         return FAILED;
     }
 
@@ -49,6 +49,7 @@ int P_kern(int semNo, pcb_t *pcb) {
 
     if (sp->value == 0) {
         blockProcess(sp, pcb);
+        pcb->semNo = semNo;
         return BLOCKED;
     } else if (sp->value > 0) {
         sp->value--;
@@ -86,32 +87,49 @@ int V_kern(int semNo) {
 
 ////////////////////////////////////////////////////////////
 void removeFromBlockQueue(pcb_t *pcb) {
-    semaphore_t *sp;
-    pcb_t *p;
-    int i;
-
-    for (i = 0; i < NUM_SEMAPHORES; i++) {
-        sp = &semaphores[i];
-        p = sp->head[pcb->priority];
-
-        // if its first in queue
-        if (p->pid == pcb->pid) {
-            sp->head[pcb->priority] = sp->head[pcb->priority]->next;
-            return;
-        }
-
-        while (p->next != NULL) {
-            if (p->next->pid == pcb->pid) {
-                p->next = pcb->next;
-                // if tail is the one to kill
-                if (sp->tail[pcb->priority]->pid == pcb->pid) {
-                    sp->tail[pcb->priority] = p;
-                }
-                return;
-            }
-            p = p->next;
-        }
+    if (pcb->semNo < 0 || pcb->semNo >= NUM_SEMAPHORES) {
+        FAIL("Should not happen.\n");
     }
+
+    semaphore_t *sp = &semaphores[pcb->semNo];
+
+    if (pcb->prev == NULL) {
+        // if prev is NULL, then it is in front
+        sp->head[pcb->priority] = pcb->next;
+    } else if (pcb->next == NULL) {
+        // if next is NULL, then it is last
+        pcb->prev->next = NULL;
+        sp->tail[pcb->priority] = pcb->prev;
+    } else {
+        pcb->prev->next = pcb->next;
+    }
+
+    // semaphore_t *sp;
+    // pcb_t *p;
+    // int i;
+
+    // for (i = 0; i < NUM_SEMAPHORES; i++) {
+    //     sp = &semaphores[i];
+    //     p = sp->head[pcb->priority];
+
+    //     // if its first in queue
+    //     if (p->pid == pcb->pid) {
+    //         sp->head[pcb->priority] = sp->head[pcb->priority]->next;
+    //         return;
+    //     }
+
+    //     while (p->next != NULL) {
+    //         if (p->next->pid == pcb->pid) {
+    //             p->next = pcb->next;
+    //             // if tail is the one to kill
+    //             if (sp->tail[pcb->priority]->pid == pcb->pid) {
+    //                 sp->tail[pcb->priority] = p;
+    //             }
+    //             return;
+    //         }
+    //         p = p->next;
+    //     }
+    // }
 }
 
 /**
@@ -126,6 +144,7 @@ void blockProcess(semaphore_t *sp, pcb_t *pcb) {
 
     priority = pcb->priority;
     pcb->next = NULL;
+    pcb->prev = NULL;
     pcb->state = STATE_BLOCKED;
 
     PRINT("PCB stats, pid: %d, next: %d\n", pcb->pid, pcb->next);
@@ -135,6 +154,7 @@ void blockProcess(semaphore_t *sp, pcb_t *pcb) {
         sp->tail[priority] = sp->head[priority];
     } else {
         sp->tail[priority]->next = pcb;
+        pcb->prev = sp->tail[priority];
         sp->tail[priority] = sp->tail[priority]->next;
     }
 }

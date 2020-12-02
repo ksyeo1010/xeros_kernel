@@ -17,6 +17,7 @@ void sleep(pcb_t *pcb, unsigned int milliseconds) {
     pcb->tick = tick;
     pcb->state = STATE_SLEEP;
     pcb->next = NULL;
+    pcb->prev = NULL;
 
     PRINT("Sleeping process, pid: %d, tick: %d.\n", pcb->pid, pcb->tick);
 
@@ -28,8 +29,6 @@ void sleep(pcb_t *pcb, unsigned int milliseconds) {
 
     // find where to put pcb in
     p = dl;
-    prev = NULL;
-
     while (p != NULL) {
         PRINT("P stats, pid: %d, tick: %d.\n", p->pid, p->tick);
         // if pcb tick is smaller than current pos tick
@@ -37,12 +36,10 @@ void sleep(pcb_t *pcb, unsigned int milliseconds) {
         if (pcb->tick < p->tick) {
             p->tick = p->tick - pcb->tick;
             pcb->next = p;
-            if (prev == NULL) {
+            if (p->prev == NULL) {
                 dl = pcb;
-            } else {
-                prev->next = pcb;
-                
             }
+            p->prev = pcb;
             return;
         }
 
@@ -52,10 +49,10 @@ void sleep(pcb_t *pcb, unsigned int milliseconds) {
         // if next is null, pcb is last
         if (p->next == NULL) {
             p->next = pcb;
+            pcb->prev = p;
             return;
         }
 
-        prev = p;
         p = p->next;
     }
 }
@@ -91,26 +88,36 @@ void tick() {
 
 ///////////////////////////////////////////////////////////
 void removeFromSleepQueue(pcb_t *pcb) {
-    pcb_t *p = dl;
-
-    // if its first in queue
-    if (p->pid == pcb->pid) {
-        dl = dl->next;
-        if (dl != NULL) {
-            dl->tick += p->tick;
-        }
-        return;
+    if (pcb->prev == NULL) {
+        // if prev is NULL, then it is in front
+        dl = pcb->next;
+    } else if (pcb->next == NULL) {
+        // if next is NULL, then it is last
+        pcb->prev->next = NULL;
+    } else {
+        pcb->prev->next = pcb->next;
     }
 
-    while (p->next != NULL) {
-        if (p->next->pid == pcb->pid) {
-            p->next = pcb->next;
-            // increment tick if needed
-            if (p->next != NULL) {
-                p->next->tick += pcb->tick;
-            }
-            return;
-        }
-        p = p->next;
-    }
+    // pcb_t *p = dl;
+
+    // // if its first in queue
+    // if (p->pid == pcb->pid) {
+    //     dl = dl->next;
+    //     if (dl != NULL) {
+    //         dl->tick += p->tick;
+    //     }
+    //     return;
+    // }
+
+    // while (p->next != NULL) {
+    //     if (p->next->pid == pcb->pid) {
+    //         p->next = pcb->next;
+    //         // increment tick if needed
+    //         if (p->next != NULL) {
+    //             p->next->tick += pcb->tick;
+    //         }
+    //         return;
+    //     }
+    //     p = p->next;
+    // }
 }

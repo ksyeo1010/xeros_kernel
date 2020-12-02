@@ -56,6 +56,7 @@ pcb_t *next() {
     head[pcb->priority] = head[pcb->priority]->next;
     pcb->state = STATE_RUNNING;
     pcb->next = NULL;
+    pcb->prev = NULL;
 
     return pcb;
 }
@@ -72,6 +73,7 @@ void ready(pcb_t *pcb) {
 
     priority = pcb->priority;
     pcb->next = NULL;
+    pcb->prev = NULL;
     pcb->state = STATE_READY;
 
     if (head[priority] == NULL) {
@@ -79,6 +81,7 @@ void ready(pcb_t *pcb) {
         tail[priority] = head[priority];
     } else {
         tail[priority]->next = pcb;
+        pcb->prev = tail[priority];
         tail[priority] = tail[priority]->next;
     }
 }
@@ -86,6 +89,8 @@ void ready(pcb_t *pcb) {
 ////////////////////////////////////////////////////////////
 void cleanup(pcb_t *pcb) {
     pcb->state = STATE_STOPPED;
+    pcb->next = NULL;
+    pcb->prev = NULL;
     PRINT("Freeing pid: %d, addr: %d.\n", pcb->pid, pcb->addr_start);
     kfree((void*) pcb->addr_start);
 }
@@ -108,25 +113,37 @@ void setPriority(pid_t pid, int priority) {
 
 ////////////////////////////////////////////////////////////
 void removeFromReadyQueue(pcb_t *pcb) {
-    pcb_t *p = head[pcb->priority];
+    // adjust pointers
 
-    // if its first in queue
-    if (p->pid == pcb->pid) {
-        head[pcb->priority] = head[pcb->priority]->next;
-        return;
+    if (pcb->prev == NULL) {
+        // if prev is NULL, then it is in front
+        head[pcb->priority] = pcb->next;
+    } else if (pcb->next == NULL) {
+        // if next is NULL, then it is last
+        pcb->prev->next = NULL;
+        tail[pcb->priority] = pcb->prev;
+    } else {
+        pcb->prev->next = pcb->next;
     }
+    // pcb_t *p = head[pcb->priority];
 
-    while (p->next != NULL) {
-        if (p->next->pid == pcb->pid) {
-            p->next = pcb->next;
-            // if tail is the one to kill
-            if (tail[pcb->priority]->pid == pcb->pid) {
-                tail[pcb->priority] = p;
-            }
-            return;
-        }
-        p = p->next;
-    }
+    // // if its first in queue
+    // if (p->pid == pcb->pid) {
+    //     head[pcb->priority] = head[pcb->priority]->next;
+    //     return;
+    // }
+
+    // while (p->next != NULL) {
+    //     if (p->next->pid == pcb->pid) {
+    //         p->next = pcb->next;
+    //         // if tail is the one to kill
+    //         if (tail[pcb->priority]->pid == pcb->pid) {
+    //             tail[pcb->priority] = p;
+    //         }
+    //         return;
+    //     }
+    //     p = p->next;
+    // }
 }
 
 ////////////////////////////////////////////////////////////

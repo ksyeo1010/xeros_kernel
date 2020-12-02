@@ -50,7 +50,6 @@ void allocateMemSlot(memHeader *memSlot, unsigned long memSize) {
     memSlot->size = memSize;
     memSlot->next = NULL;
     memSlot->prev = NULL;
-
     // set memList to head 
     reallocateMemPtr();
 }
