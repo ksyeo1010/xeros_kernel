@@ -49,7 +49,7 @@ int create(void (*func)(void), int stack) {
     pcb->priority = 3;
     pcb->semNo = -1;
     pcb->sig_mask = 0xFFFFFFFF;
-    memset(pcb->sigTable, 0, sizeof(pcb->sigTable);
+    memset(pcb->sigTable, 0, sizeof(pcb->sigTable));
     PRINT("PCB Stats, pid: %d, pstate: %d, pesp: %d, addr_start:%d, max_addr: %d\n",
         pcb->pid, pcb->state, pcb->esp, pcb->addr_start, addr_end);
 

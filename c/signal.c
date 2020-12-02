@@ -57,6 +57,17 @@ int signal(pid_t pid, int signum) {
         target->sig_ignored = target->sig_ignored | (0x1 << signum);
         PRINT("Signal ignored pid: %d, signum: %d\n", target->pid, signum);
     } else {
+        // remove if it is anything that is not running/ready and add back to ready
+        if ((target->state != STATE_READY) && (target->state != STATE_RUNNING)) {
+            removeFromQueue(target);
+            if (target->state == STATE_SLEEP) {
+                target->rc = target->tick * TICK_SPLIT;
+            } else {
+                target->rc = SIG_EINTR;
+            }
+            ready(target); 
+        }
+
         // set signal context frame
         sigframe_t *sig_frame = (sigframe_t *) (target->esp - sizeof(sigframe_t));
 
@@ -74,6 +85,11 @@ int signal(pid_t pid, int signum) {
 
         PRINT("sig frame stats, addr: %d, ctx frame ptrs: %d, signum: %d, sig mask: 0x%x, handler: %d, ret addr: %d\n", 
             target->esp, sig_frame->contextFramePtr, signum, target->sig_mask, sig_frame->handlerAddr, sig_frame->ctx.esp);
+
+        // toggle down ignored if this was ignored signal
+        if (target->sig_ignored & (0x1 << signum)) {
+            target->sig_ignored = target->sig_ignored ^ (0x1 << signum);
+        }
     }
 
     return SIG_OK;
@@ -134,4 +150,15 @@ void restoreToReadyQueue(pcb_t *pcb) {
     for (p = pcb->wait_head; p != NULL; p = p->next) {
         ready(p);
     }
+}
+
+int getsig(int bits) {
+    int i;
+    for (i = SIG_TABLE_SIZE - 1; i >=0; i++) {
+        if (bits & 0x80000000) {
+            break;
+        }
+        bits = bits << 1;
+    }
+    return i;
 }

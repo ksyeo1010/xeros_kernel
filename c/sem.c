@@ -103,33 +103,6 @@ void removeFromBlockQueue(pcb_t *pcb) {
     } else {
         pcb->prev->next = pcb->next;
     }
-
-    // semaphore_t *sp;
-    // pcb_t *p;
-    // int i;
-
-    // for (i = 0; i < NUM_SEMAPHORES; i++) {
-    //     sp = &semaphores[i];
-    //     p = sp->head[pcb->priority];
-
-    //     // if its first in queue
-    //     if (p->pid == pcb->pid) {
-    //         sp->head[pcb->priority] = sp->head[pcb->priority]->next;
-    //         return;
-    //     }
-
-    //     while (p->next != NULL) {
-    //         if (p->next->pid == pcb->pid) {
-    //             p->next = pcb->next;
-    //             // if tail is the one to kill
-    //             if (sp->tail[pcb->priority]->pid == pcb->pid) {
-    //                 sp->tail[pcb->priority] = p;
-    //             }
-    //             return;
-    //         }
-    //         p = p->next;
-    //     }
-    // }
 }
 
 /**

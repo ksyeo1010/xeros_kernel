@@ -22,6 +22,11 @@
 #define SYS_SIGNAL          0x60
 #define SYS_SIGRETURN       0x61
 #define SYS_WAIT            0x62
+#define SYS_OPEN            0x80
+#define SYS_CLOSE           0x81
+#define SYS_WRITE           0x82
+#define SYS_READ            0x83
+#define SYS_IOCTL           0x84
 
 // process states
 #define STATE_STOPPED       0       /* process stopped state */
@@ -34,8 +39,8 @@
 // signal return values
 #define SIG_OK               0
 #define SIG_FAIL            -1
-#define SIG_NOT_EXISTS      -999
 #define SIG_EINTR           -777
+#define SIG_NOT_EXISTS      -999
 
 // process table size
 #define PCB_TABLE_SIZE      64
@@ -45,6 +50,9 @@
 
 // signal table size
 #define SIG_TABLE_SIZE      32
+
+// fd table size
+#define FD_TABLE_SIZE       4
 
 // define pid type
 typedef unsigned int pid_t;
@@ -75,6 +83,7 @@ typedef struct process_control_block {
     struct process_control_block *wait_tail;
     struct process_control_block *waiting_on;
     sighandler_t sigTable[SIG_TABLE_SIZE];
+    int fdTable[FD_TABLE_SIZE];
 } pcb_t;
 
 typedef struct struct_ps processStatuses;
@@ -204,16 +213,65 @@ extern void removeFromSleepQueue(pcb_t *pcb);
  */ 
 extern int removeFromQueue(pcb_t *pcb);
 
+/**
+ * @brief Sets the a signal and the handler given the process.
+ * 
+ * @param {pcb} The process to set the handler.
+ * @param {signum} The signal number to set.
+ * @param {handler} The handler itself.
+ * @returns SYS_FAIL if an error occurs, otherwise the previous sighandler is returned.
+ */
 extern sighandler_t set_signal(pcb_t *pcb, int signum, sighandler_t handler);
 
+/**
+ * @brief Handles the trampoline code for a signal.
+ * 
+ * @param {handler} The handler to run given a signal.
+ * @param {cntxPtr} The context to return once it is finished.
+ */
 extern void sigtramp(void (*handler)(void *), void *cntxPtr);
 
+/**
+ * @brief Handles the signal case in the kernel. Allocates the signal context frame
+ *        and also handles the delivery.
+ * 
+ * @param {pid} The pid to send the signal to.
+ * @param {signum} The signal number to send.
+ * @returns SIG_FAIL if signal doesn't exists, SIG_NO_EXISTS if process doesn't exists
+ *          SIG_OK otherwise.
+ */
 extern int signal(pid_t pid, int signum);
 
+/**
+ * @brief Adds a process the waiting queue of another process.
+ * 
+ * @param {pcb} The process currently waiting.
+ * @param {pid} The process pid to wait for.
+ * @returns SIG_FAIL if pid is 0 or no available pid exists, SIG_OK otherwise.
+ */
 extern int addToWaitQueue(pcb_t *pcb, pid_t pid);
 
+/**
+ * @brief Removes a process from its waiting queue.
+ * 
+ * @param {pcb} The process to remove from the waiting queue.
+ */
 extern void removeFromWaitQueue(pcb_t *pcb);
 
+/**
+ * @brief Restores all waiting process back to the ready queue
+ *        if the process terminates.
+ * 
+ * @param {pcb} The process that terminates.
+ */
 extern void restoreToReadyQueue(pcb_t *pcb);
+
+/**
+ * @brief Given a 32-bit integer, gets the highest bit turned on.
+ * 
+ * @param {bits} The 32-bit integer.
+ * @returns The highest bit turned on.
+ */
+extern int getsig(int bits);
 
 #endif

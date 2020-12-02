@@ -82,14 +82,42 @@ int sysgetcputimes(processStatuses *ps) {
     return syscall(SYS_CPUTIMES, ps);
 }
 
+////////////////////////////////////////////////////////////
 sighandler_t syssignal(int signum, sighandler_t handler) {
     return (sighandler_t) syscall(SYS_SIGNAL, signum, handler);
 }
 
+////////////////////////////////////////////////////////////
 void syssigreturn(void *cntxPtr) {
     syscall(SYS_SIGRETURN, cntxPtr);
 }
 
+////////////////////////////////////////////////////////////
 int syswait(pid_t pid) {
     return syscall(SYS_WAIT, pid);
+}
+
+////////////////////////////////////////////////////////////
+int sysopen(int device_no) {
+    syscall(SYS_OPEN, device_no);
+}
+
+////////////////////////////////////////////////////////////
+int sysclose(int fd) {
+    syscall(SYS_CLOSE, fd);
+}
+
+////////////////////////////////////////////////////////////
+int syswrite(int fd, void *buff, int bufflen) {
+    syscall(SYS_WRITE, fd, buff, bufflen);
+}
+
+////////////////////////////////////////////////////////////
+int sysread(int fd, void *buff, int bufflen) {
+    syscall(SYS_READ, fd, buff, bufflen);
+}
+
+////////////////////////////////////////////////////////////
+int sysioctl(int fd, unsigned long command, ...) {
+    syscall(SYS_IOCTL, fd, command, ...);
 }

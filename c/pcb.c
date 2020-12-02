@@ -125,25 +125,6 @@ void removeFromReadyQueue(pcb_t *pcb) {
     } else {
         pcb->prev->next = pcb->next;
     }
-    // pcb_t *p = head[pcb->priority];
-
-    // // if its first in queue
-    // if (p->pid == pcb->pid) {
-    //     head[pcb->priority] = head[pcb->priority]->next;
-    //     return;
-    // }
-
-    // while (p->next != NULL) {
-    //     if (p->next->pid == pcb->pid) {
-    //         p->next = pcb->next;
-    //         // if tail is the one to kill
-    //         if (tail[pcb->priority]->pid == pcb->pid) {
-    //             tail[pcb->priority] = p;
-    //         }
-    //         return;
-    //     }
-    //     p = p->next;
-    // }
 }
 
 ////////////////////////////////////////////////////////////
@@ -162,8 +143,11 @@ int removeFromQueue(pcb_t *pcb) {
         case STATE_BLOCKED:
             removeFromBlockQueue(pcb);
             break;
+        case STATE_WAITING:
+            removeFromWaitQueue(pcb);
+            break;
         default:
-            PRINT("Should be either READY, BLOCKED, SLEEP state.\n");
+            PRINT("Should be either READY, BLOCKED, SLEEP, WAITING state.\n");
             return SYSERR;
     }
 

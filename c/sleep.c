@@ -88,36 +88,24 @@ void tick() {
 
 ///////////////////////////////////////////////////////////
 void removeFromSleepQueue(pcb_t *pcb) {
+    pcb_t *p;
+    int tick = pcb->tick;
+
+    // get sum of all ticks
+    for (p = pcb->prev; p != NULL; p = p->prev) {
+        pcb->tick += p->tick;
+    }
+
+    // adjust pointers
     if (pcb->prev == NULL) {
         // if prev is NULL, then it is in front
         dl = pcb->next;
+        dl->tick += tick;
     } else if (pcb->next == NULL) {
         // if next is NULL, then it is last
         pcb->prev->next = NULL;
     } else {
+        pcb->next->tick += tick;
         pcb->prev->next = pcb->next;
     }
-
-    // pcb_t *p = dl;
-
-    // // if its first in queue
-    // if (p->pid == pcb->pid) {
-    //     dl = dl->next;
-    //     if (dl != NULL) {
-    //         dl->tick += p->tick;
-    //     }
-    //     return;
-    // }
-
-    // while (p->next != NULL) {
-    //     if (p->next->pid == pcb->pid) {
-    //         p->next = pcb->next;
-    //         // increment tick if needed
-    //         if (p->next != NULL) {
-    //             p->next->tick += pcb->tick;
-    //         }
-    //         return;
-    //     }
-    //     p = p->next;
-    // }
 }

@@ -8,19 +8,30 @@ void printA(void) {
     sysputs("A\n");
 }
 
+void printB(void) {
+    sysputs("B\n");
+}
+
 void producer(void) {
     int pid;
     char buf[1024];
+    int sleep;
 
     pid = sysgetpid();
 
     sprintf(buf, "My pid is %d.\n", pid);
     sysputs(buf);
 
-    syssignal(3, &printA);
+    syssignal(5, &printA);
 
-    sysputs("sleeping for 2000.\n");
-    syssleep(2000);
+    sleep = syssleep(5000);
+
+    sprintf(buf, "Interrupted pid %d at %d.\n", pid, sleep);
+    sysputs(buf);
+
+    for (;;) {
+        sysyield();
+    }
 }
 
 void root(void) {
@@ -31,9 +42,6 @@ void root(void) {
 
     syssleep(1000);
 
-    syskill(2, 3);
-    sysputs("waiting.\n");
-    syswait(2);
-    sysputs("done waiting.\n");
+    syskill(2, 5);
 
 }

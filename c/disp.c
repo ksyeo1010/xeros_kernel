@@ -115,11 +115,20 @@ void dispatch() {
             case SYS_SIGRETURN:
                 ap = (va_list) pcb->args;
                 pcb->esp = (unsigned long) va_arg(ap, void *);
+                // shift back
+                pcb->sig_mask = (pcb->sig_mask >> *(int *)(pcb->esp - sizeof(int)));
+                PRINT("pid %d, sig mask: 0x%x\n", pcb->pid, pcb->sig_mask);
+                // signal again if we have ignored signals
+                if (pcb->sig_ignored != 0) {
+                    signal(pcb->pid, getsig(pcb->sig_ignored));
+                }
                 break;
             case SYS_WAIT:
                 ap = (va_list) pcb->args;
                 pcb->rc = addToWaitQueue(pcb, va_arg(ap, pid_t));
                 pcb = next();
+                break;
+            case SYS_OPEN:
                 break;
         }
     }

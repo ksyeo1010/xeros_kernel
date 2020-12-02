@@ -284,12 +284,11 @@ extern pid_t sysgetpid(void);
 extern void sysputs(char *str);
 
 /**
- * @brief Kills the process with the given pid if the pid is
- *        not is STOPPED state. Killing the current process
- *        will work as doing a systop on current spot.
+ * @brief Requests the signal to be delivered to a specific process.
  * 
- * @param {pid} The pid of the process to kill.
- * @returns 0 if succeed, -1 otherwise.
+ * @param {pid} The pid of the process to send the signal.
+ * @param {signalNumber} The signal number to send.
+ * @returns 0 if succeed, -1 if signal number is invalid, -999 if process does not exist.
  */
 extern int syskill(pid_t pid, int signalNumber);
 
@@ -340,12 +339,46 @@ extern unsigned int syssleep(unsigned int milliseconds);
  */
 extern int sysgetcputimes(processStatuses *ps);
 
-
+/**
+ * @brief Sets the signal handler given the signal number of the process.
+ *        signum must be between 0 and 30.
+ * 
+ * @param {signum} The signal number to set the handler
+ * @param {handler} The handler itself
+ * @return 0 if an error occurs, the previous otherwise.
+ */
 extern sighandler_t syssignal(int signum, sighandler_t handler);
 
+/**
+ * @brief Call to return to previous context used by sigtramp only.
+ *        It also enables ignored signals.
+ * 
+ * @param {cntxPtr} The context to return to.
+ */
 extern void syssigreturn(void *cntxPtr);
 
+/**
+ * @brief Call to wait for a process to terminate.
+ * 
+ * @param {pid} The process pid to wait for.
+ * @return 0 if terminates normally, -1 otherwise.
+ */
 extern int syswait(pid_t pid);
+
+
+extern int sysopen(int device_no);
+
+
+extern int sysclose(int fd);
+
+
+extern int syswrite(int fd, void *buff, int bufflen);
+
+
+extern int sysread(int fd, void *buff, int bufflen);
+
+
+extern int sysioctl(int fd, unsigned long command, ...);
 
 /* ========================================================================== */
 /* root function declarations */
