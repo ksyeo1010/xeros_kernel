@@ -1,15 +1,19 @@
 #include <xeroskernel.h>
 #include <di_calls.h>
 #include <zerorand.h>
+#include <kbd.h>
 
 /* device table */
 devsw devtab[DEV_TABLE_SIZE];
 
+////////////////////////////////////////////////////////////
 void devinit() {
     zero_init(&devtab[ZERO]);
     rand_init(&devtab[RAND]);
+    kbd_init(&devtab[KEYBOARD]);
 }
 
+////////////////////////////////////////////////////////////
 int di_open(pcb_t *pcb, int device_no) {
     int fd;
     devsw *dev;
@@ -42,6 +46,7 @@ int di_open(pcb_t *pcb, int device_no) {
     return fd;
 }
 
+////////////////////////////////////////////////////////////
 int di_close(pcb_t *pcb, int fd) {
     devsw *dev;
 
@@ -60,10 +65,11 @@ int di_close(pcb_t *pcb, int fd) {
     return DEV_OK;
 }
 
+////////////////////////////////////////////////////////////
 int di_write(pcb_t *pcb, int fd, void *buff, int bufflen) {
     devsw *dev;
 
-    PRINT("WRITE pid: %d, fd: %d, bufflen\n", pcb->pid, fd, bufflen);
+    PRINT("WRITE pid: %d, fd: %d, bufflen: %d\n", pcb->pid, fd, bufflen);
 
     // check if fd is valid
     if (fd < 0 || fd > FD_TABLE_SIZE) return DEV_FAIL;
@@ -75,10 +81,11 @@ int di_write(pcb_t *pcb, int fd, void *buff, int bufflen) {
     return dev->dvwrite(pcb, buff, bufflen);
 }
 
+////////////////////////////////////////////////////////////
 int di_read(pcb_t *pcb, int fd, void *buff, int bufflen) {
     devsw *dev;
 
-    PRINT("READ pid: %d, fd: %d, bufflen\n", pcb->pid, fd, bufflen);
+    PRINT("READ pid: %d, fd: %d, bufflen: %d\n", pcb->pid, fd, bufflen);
 
     // check if fd is valid
     if (fd < 0 || fd > FD_TABLE_SIZE) return DEV_FAIL;
@@ -90,10 +97,11 @@ int di_read(pcb_t *pcb, int fd, void *buff, int bufflen) {
     return dev->dvread(pcb, buff, bufflen);
 }
 
+////////////////////////////////////////////////////////////
 int di_ioctl(pcb_t *pcb, int fd, unsigned long command, void *ap) {
     devsw *dev;
 
-    PRINT("IOCTL pid: %d, fd: %d, command\n", pcb->pid, fd, command);
+    PRINT("IOCTL pid: %d, fd: %d, command: %d\n", pcb->pid, fd, command);
 
     // check if fd is valid
     if (fd < 0 || fd > FD_TABLE_SIZE) return DEV_FAIL;

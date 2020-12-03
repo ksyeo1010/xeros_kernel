@@ -4,24 +4,25 @@
 #define CONSTANTS_H
 
 // kernel calls
+#define TIMER_INT       0x20        /* The timer int value */
+#define KBD_INT         0x21
 #define SYS_CALL        0x31        /* general call to idt */
 
 // syscall identifiers
-#define SYS_CREATE          0x10        /* create process block */
-#define SYS_YIELD           0x11        /* set current process to the end of queue */
-#define SYS_STOP            0x12        /* remove process from ready queue */
-#define SYS_GETPID          0x13        /* gets the pid of the current process */
-#define SYS_PUTS            0x14        /* displays null terminated string to screen */
-#define SYS_KILL            0x15        /* kills the process given pid */
-#define SYS_SETPRIO         0x16        /* sets the priority of the process */
-#define SYS_P               0x17        /* blocks process in a semaphore */
-#define SYS_V               0x18        /* unblocks process in a semaphore */
-#define SYS_SLEEP           0x19        /* sleeps the process given amount of time */
-#define TIMER_INT           0x20        /* The timer int value */
-#define SYS_CPUTIMES        0x21
-#define SYS_SIGNAL          0x60
-#define SYS_SIGRETURN       0x61
-#define SYS_WAIT            0x62
+#define SYS_CREATE          0x60        /* create process block */
+#define SYS_YIELD           0x61        /* set current process to the end of queue */
+#define SYS_STOP            0x62        /* remove process from ready queue */
+#define SYS_GETPID          0x63        /* gets the pid of the current process */
+#define SYS_PUTS            0x64        /* displays null terminated string to screen */
+#define SYS_KILL            0x65        /* kills the process given pid */
+#define SYS_SETPRIO         0x66        /* sets the priority of the process */
+#define SYS_P               0x67        /* blocks process in a semaphore */
+#define SYS_V               0x68        /* unblocks process in a semaphore */
+#define SYS_SLEEP           0x69        /* sleeps the process given amount of time */
+#define SYS_CPUTIMES        0x6A
+#define SYS_SIGNAL          0x70
+#define SYS_SIGRETURN       0x71
+#define SYS_WAIT            0x72
 #define SYS_OPEN            0x80
 #define SYS_CLOSE           0x81
 #define SYS_WRITE           0x82
@@ -43,8 +44,20 @@
 #define SIG_NOT_EXISTS      -999
 
 // device return values
+#define DEV_BLOCK           -2
 #define DEV_FAIL            -1
 #define DEV_OK              0
+
+// devices
+#define ZERO                0
+#define RAND                1
+#define KEYBOARD            2
+
+// ioctl commands
+#define RESET_SEED          23
+#define COMMAND_EOF         18
+#define COMMAND_ECHO_OFF    73
+#define COMMAND_ECHO_ON     74
 
 // process table size
 #define PCB_TABLE_SIZE      64
@@ -78,8 +91,8 @@ typedef struct process_control_block {
     int semNo;
     int sig_mask;
     int sig_ignored;
-    int          bufferlen;
-    void        *buffer;
+    int          bufflen;
+    void        *buf;
     long         cpuTime;                   /* CPU time consumed                     */
     unsigned int otherpid;
     unsigned int tick;                      /* The current tick of a process */

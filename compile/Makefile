@@ -95,5 +95,5 @@ pcb.o: ../c/pcb.c ../h/xeroskernel.h ../h/pcb.h
 test.o: ../c/test.c ../h/xeroskernel.h ../h/xeroslib.h
 sem.o: ../c/sem.c ../h/xeroskernel.h
 zerorand.o: ../c/zerorand.c ../h/zerorand.h ../h/xeroskernel.h ../h/xeroslib.h
-kbd.o: ../c/kbd.c ../h/kbd.h ../h/xeroskernel.h ../h/xeroslib.h
+kbd.o: ../c/kbd.c ../h/kbd.h ../h/xeroskernel.h ../h/xeroslib.h ../h/i386.h
 di_calls.o: ../c/di_calls.c ../h/di_calls.h ../h/xeroskernel.h ../h/xeroslib.h

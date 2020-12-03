@@ -5,8 +5,6 @@
 
 #include <constants.h>
 
-#define RESET_SEED      23
-
 /* zero device functions */
 
 extern void zero_init(devsw *dev);

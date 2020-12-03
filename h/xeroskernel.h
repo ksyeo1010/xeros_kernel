@@ -19,7 +19,7 @@ extern void run_test(void);
 #define CONSOLE_PRINTING /* Comment/Uncomment this line to print on console */
 
 /* For Debugging ONLY */
-#define IS_DEBUG /* Comment/Uncomment this line to print DEBUG messages */
+// #define IS_DEBUG /* Comment/Uncomment this line to print DEBUG messages */
 #ifdef IS_DEBUG
 // from https://piazza.com/class/keulh3m6vuj47c?cid=46
 #define PRINT(...) do {\
@@ -363,19 +363,50 @@ extern void syssigreturn(void *cntxPtr);
  */
 extern int syswait(pid_t pid);
 
-
+/**
+ * @brief Call to open a device.
+ * 
+ * @param {device_no} The device number to open.
+ * @returns -1 if an error occurred, 0 otherwise.
+ */
 extern int sysopen(int device_no);
 
-
+/**
+ * @brief Call to close a device.
+ * 
+ * @param {fd} The fd number a device is associated with.
+ * @returns -1 if an error occurred, 0 otherwise.
+ */
 extern int sysclose(int fd);
 
-
+/**
+ * @brief Call to write to a device.
+ * 
+ * @param {fd} The fd number a device is associated with.
+ * @param {buff} The buffer containing data to write to a device.
+ * @param {bufflen} The length of the buffer.
+ * @returns -1 if an error occurred, the bytes written to a device otherwise.
+ */
 extern int syswrite(int fd, void *buff, int bufflen);
 
-
+/**
+ * @brief Call to read from a device.
+ * 
+ * @param {fd} The fd number a device is associated with.
+ * @param {buff} The buffer containing data to read from a device.
+ * @param {bufflen} The length of the buffer.
+ * @returns -1 if an error occurred, the bytes read from a device otherwise.
+ */
 extern int sysread(int fd, void *buff, int bufflen);
 
-
+/**
+ * @brief Call to make special control functions to a device.
+ * 
+ * @param {fd} The fd number a device is associated with.
+ * @param {command} The command number to run.
+ * @param {...} Extra parameters needed by the command.
+ * @returns -1 is failed, 0 otherwise.
+ */
 extern int sysioctl(int fd, unsigned long command, ...);
 
 /* ========================================================================== */
@@ -395,9 +426,22 @@ extern void root(void);
  */
 extern void idleproc(void);
 
+/* ========================================================================== */
+/* device function declarations */
+/* ========================================================================== */
 
+/**
+ * @brief Initiates the devices currently supported by the kernel.
+ *        ZERO, RAND, KBD are the devices that setup during the function call.
+ */
 extern void devinit(void);
 
+/**
+ * @brief Function to run once a keyboard interrupt occurs. Updated the KBD
+ *        buffer, writes to a FD buffer if its currently blocked by 
+ *        the keyboard device.
+ */
+extern void kbdint_handler(void);
 
 /* Anything you add must be between the #define and this comment */
 #endif

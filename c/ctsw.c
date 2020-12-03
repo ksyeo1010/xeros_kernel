@@ -6,6 +6,7 @@
 
 void _ISREntryPoint(void);      /* code to run when interrupt happens */
 void _TimerEntryPoint(void);
+void _KBDEntryPoint(void);
 static void *k_stack;           /* the k_stack pointer */
 static unsigned long *esp;      /* the esp pointer */
 static int rc;
@@ -16,7 +17,8 @@ static unsigned long *args;     /* the args pointer */
 ////////////////////////////////////////////////////////////
 void contextinit() {
     set_evec(SYS_CALL, (unsigned long) _ISREntryPoint);
-    set_evec(IRQBASE, (unsigned long) _TimerEntryPoint);
+    set_evec(TIMER_INT, (unsigned long) _TimerEntryPoint);
+    set_evec(KBD_INT, (unsigned long) _KBDEntryPoint);
 
     initPIT(PIT_VALUE);
 }
@@ -39,6 +41,11 @@ int contextswitch(pcb_t* pcb) {
         pusha                   \n\
         movl $1, %%ecx          \n\
         jmp _CommonJump         \n\
+    _KBDEntryPoint:             \n\
+        cli                     \n\
+        pusha                   \n\
+        movl $2, %%ecx          \n\
+        jmp _CommonJump         \n\
     _ISREntryPoint:             \n\
         cli                     \n\
         pusha                   \n\
@@ -57,8 +64,11 @@ int contextswitch(pcb_t* pcb) {
         : "%eax", "%ecx", "%edx"
     );
 
-    // if it is system time out
-    if (interrupt == 1) {
+    // check which interrupt
+    if (interrupt == 2) {
+        calltype = KBD_INT;
+        pcb->rc = rc;
+    } else if (interrupt == 1) {
         calltype = TIMER_INT;
         pcb->rc = rc;
     } else {

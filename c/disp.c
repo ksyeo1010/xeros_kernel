@@ -28,8 +28,6 @@ void dispatch() {
     pid_t pid;
     int signum;
     int priority;                   /* the priority to set */
-    int semNo;                      /* the semaphore number arg */
-    unsigned int milliseconds;      /* the milliseconds arg */
     int fd;
     void *buffer;
     int bufferlen;
@@ -84,8 +82,7 @@ void dispatch() {
                 break;
             case SYS_P:
                 ap = (va_list) pcb->args;
-                semNo = va_arg(ap, int);
-                pcb->rc = P_kern(semNo, pcb);
+                pcb->rc = P_kern(va_arg(ap, int), pcb);
                 if (pcb->rc == BLOCKED) {
                     pcb->rc = SUCCEED;
                     pcb = next();
@@ -93,8 +90,7 @@ void dispatch() {
                 break;
             case SYS_V:
                 ap = (va_list) pcb->args;
-                semNo = va_arg(ap, int);
-                pcb->rc = V_kern(semNo);
+                pcb->rc = V_kern(va_arg(ap, int));
                 break;
             case TIMER_INT:
                 tick();
@@ -105,8 +101,7 @@ void dispatch() {
                 break;
             case SYS_SLEEP:
                 ap = (va_list) pcb->args;
-                milliseconds = va_arg(ap, unsigned int);
-                sleep(pcb, milliseconds);
+                sleep(pcb, va_arg(ap, unsigned int));
                 pcb = next();
                 break;
             case SYS_CPUTIMES:
@@ -155,12 +150,19 @@ void dispatch() {
                 buffer = va_arg(ap, void*);
                 bufferlen = va_arg(ap, int);
                 pcb->rc = di_read(pcb, fd, buffer, bufferlen);
+                if (pcb->state == DEV_BLOCK) {
+                    pcb = next();
+                }
                 break;
             case SYS_IOCTL:
                 ap = (va_list) pcb->args;
                 fd = va_arg(ap, int);
                 command = va_arg(ap, unsigned long);
                 pcb->rc = di_ioctl(pcb, fd, command, va_arg(ap, void *));
+                break;
+            case KBD_INT:
+                kbdint_handler();
+                end_of_intr();
                 break;
         }
     }
