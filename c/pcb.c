@@ -147,6 +147,8 @@ int removeFromQueue(pcb_t *pcb) {
         case STATE_WAITING:
             removeFromWaitQueue(pcb);
             break;
+        case DEV_BLOCK:
+            break; // don't do anything
         default:
             PRINT("Should be either READY, BLOCKED, SLEEP, WAITING state.\n");
             return SYSERR;

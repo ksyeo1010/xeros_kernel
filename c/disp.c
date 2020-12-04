@@ -26,6 +26,7 @@ void dispatch() {
     int stack;                      /* size to pass when create */
     char *str;                      /* store string to print to screen */
     pid_t pid;
+    pcb_t *pcb_k;
     int signum;
     int priority;                   /* the priority to set */
     int fd;
@@ -117,7 +118,9 @@ void dispatch() {
                 ap = (va_list) pcb->args;
                 pcb->esp = (unsigned long) va_arg(ap, void *);
                 // shift back
-                pcb->sig_mask = (pcb->sig_mask >> *(int *)(pcb->esp - sizeof(int)));
+                pcb->sig_mask = (pcb->sig_mask >> *(int *)(pcb->esp - 2*sizeof(int)));
+                // get return value before signal
+                pcb->rc = *(int *)(pcb->esp - sizeof(int));
                 PRINT("pid %d, sig mask: 0x%x\n", pcb->pid, pcb->sig_mask);
                 // signal again if we have ignored signals
                 if (pcb->sig_ignored != 0) {

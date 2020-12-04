@@ -200,7 +200,7 @@ void kbdint_handler() {
     }
 
     pcb_t *pcb = kbd.pcb;
-    if (pcb->state == DEV_BLOCK) {
+    if ((pcb->state == DEV_BLOCK) && (kbd.buff_ind > 0)) {
         int done = 0;
         char *dup = (char *) pcb->buf;
 

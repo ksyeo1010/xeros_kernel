@@ -50,7 +50,7 @@ int signal(pid_t pid, int signum) {
     // if target does not exists
     if (target == NULL) return SIG_NOT_EXISTS;
     // if sig is no between 0~31
-    if (signum < 0 || signum >= (SIG_TABLE_SIZE - 1)) return SIG_FAIL;
+    if (signum < 0 || signum > (SIG_TABLE_SIZE - 1)) return SIG_FAIL;
     // if signal does not exists
     if (target->sigTable[signum] == NULL) return SIG_FAIL;
 
@@ -63,7 +63,7 @@ int signal(pid_t pid, int signum) {
             removeFromQueue(target);
             if (target->state == STATE_SLEEP) {
                 target->rc = target->tick * TICK_SPLIT;
-            } else {
+            } else if (target->state != DEV_BLOCK) {
                 target->rc = SIG_EINTR;
             }
             ready(target); 
@@ -80,6 +80,7 @@ int signal(pid_t pid, int signum) {
         sig_frame->handlerAddr = (unsigned long) target->sigTable[signum];
         sig_frame->contextFramePtr = target->esp;
         sig_frame->prevSigNum = signum;
+        sig_frame->returnValue = target->rc;
 
         target->esp = (unsigned long) sig_frame;
         target->sig_mask = target->sig_mask << signum;

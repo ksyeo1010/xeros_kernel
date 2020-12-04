@@ -44,6 +44,7 @@ int create(void (*func)(void), int stack) {
     cf->free_slots[0] = (unsigned long) sysstop;
 
     // set pcb values
+    memset(pcb, 0, sizeof(pcb)); // clear any values a stopped process could have
     pcb->pid = pcb_id++;
     pcb->esp = (unsigned long) cf;
     pcb->addr_start = (unsigned long) addr;
@@ -51,7 +52,7 @@ int create(void (*func)(void), int stack) {
     pcb->priority = 3;
     pcb->semNo = -1;
     pcb->sig_mask = 0xFFFFFFFF;
-    memset(pcb->sigTable, 0, sizeof(pcb->sigTable));
+    pcb->sigTable[SIG_TABLE_SIZE-1] = (sighandler_t) sysstop; // set last signal the signal to kill
     PRINT("PCB Stats, pid: %d, pstate: %d, pesp: %d, addr_start:%d, max_addr: %d\n",
         pcb->pid, pcb->state, pcb->esp, pcb->addr_start, addr_end);
 

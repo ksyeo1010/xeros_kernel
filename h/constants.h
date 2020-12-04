@@ -139,6 +139,7 @@ typedef struct signal_context_frame {
     unsigned long handlerAddr;
     unsigned long contextFramePtr;
     unsigned long prevSigNum;
+    unsigned long returnValue;
 } sigframe_t;
 
 // device structure
