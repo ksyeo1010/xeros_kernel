@@ -25,14 +25,13 @@ void dispatch() {
     void *func;                     /* function pointer to pass when create */
     int stack;                      /* size to pass when create */
     char *str;                      /* store string to print to screen */
-    pid_t pid;
-    pcb_t *pcb_k;
-    int signum;
+    pid_t pid;                      /* the pid */
+    int signum;                     /* signal number */
     int priority;                   /* the priority to set */
-    int fd;
-    void *buffer;
-    int bufferlen;
-    unsigned long command;
+    int fd;                         /* file description argument */
+    void *buffer;                   /* buffer argument */
+    int bufferlen;                  /* the length of the buffer argument */
+    unsigned long command;          /* the command argument */
 
     // the next process. Should be the idle process.
     pcb = next();

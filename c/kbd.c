@@ -3,6 +3,7 @@
 #include <kbd.h>
 #include <stdarg.h>
 #include <i386.h>
+#include <pcb.h>
 
 #define KEY_UP 0x80 /* If this bit is on then it is a key   */
                     /* up event instead of a key down event */

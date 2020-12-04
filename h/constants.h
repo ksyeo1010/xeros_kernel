@@ -19,15 +19,15 @@
 #define SYS_P               0x67        /* blocks process in a semaphore */
 #define SYS_V               0x68        /* unblocks process in a semaphore */
 #define SYS_SLEEP           0x69        /* sleeps the process given amount of time */
-#define SYS_CPUTIMES        0x6A
-#define SYS_SIGNAL          0x70
-#define SYS_SIGRETURN       0x71
-#define SYS_WAIT            0x72
-#define SYS_OPEN            0x80
-#define SYS_CLOSE           0x81
-#define SYS_WRITE           0x82
-#define SYS_READ            0x83
-#define SYS_IOCTL           0x84
+#define SYS_CPUTIMES        0x6A        /* gets the cpu running time of each process alive */
+#define SYS_SIGNAL          0x70        /* set the signal of a process */
+#define SYS_SIGRETURN       0x71        /* sig return call for the sig tramp */
+#define SYS_WAIT            0x72        /* wait call for a process to terminate */
+#define SYS_OPEN            0x80        /* open call of a device */
+#define SYS_CLOSE           0x81        /* close call of a device */
+#define SYS_WRITE           0x82        /* write call of a device */
+#define SYS_READ            0x83        /* read call of a device */
+#define SYS_IOCTL           0x84        /* ioctl call of a device */
 
 // process states
 #define STATE_STOPPED       0       /* process stopped state */
@@ -35,7 +35,7 @@
 #define STATE_READY         2       /* process ready state */
 #define STATE_BLOCKED       3       /* process blocked state */
 #define STATE_SLEEP         4       /* process sleep state */
-#define STATE_WAITING       5
+#define STATE_WAITING       5       /* the waiting state */
 
 // signal return values
 #define SIG_OK               0
@@ -84,28 +84,27 @@ typedef struct fd_struct {
 
 // Process control block
 typedef struct process_control_block {
-    pid_t pid;                              /* The pid of the process */ 
-    int state;                              /* The state of the process */
-    int rc;                                 /* The return value */
-    int priority;                           /* The priority of the process */
-    int semNo;
-    int sig_mask;
-    int sig_ignored;
-    int          bufflen;
-    void        *buf;
-    long         cpuTime;                   /* CPU time consumed                     */
-    unsigned int otherpid;
-    unsigned int tick;                      /* The current tick of a process */
-    unsigned long esp;                      /* The stack pointer of the process */
-    unsigned long addr_start;               /* The initial address of the process */
-    unsigned long args;                     /* The pointer to the arguments in the stack */
-    struct process_control_block *next;     /* The next pcb in the queue if any */
-    struct process_control_block *prev;
-    struct process_control_block *wait_head;
-    struct process_control_block *wait_tail;
-    struct process_control_block *waiting_on;
-    sighandler_t sigTable[SIG_TABLE_SIZE];
-    fd_t fdt[FD_TABLE_SIZE];
+    pid_t pid;                                      /* The pid of the process */ 
+    int state;                                      /* The state of the process */
+    int rc;                                         /* The return value */
+    int priority;                                   /* The priority of the process */
+    int semNo;                                      /* The semaphore number the process is currently on */
+    int sig_mask;                                   /* The sigmask bits */
+    int sig_ignored;                                /* The ignored sigmasks */
+    int          bufflen;                           /* The bufferlen currently the process is holding */
+    void        *buf;                               /* The buffer the process is currently holding */
+    long         cpuTime;                           /* CPU time consumed                     */
+    unsigned int tick;                              /* The current tick of a process */
+    unsigned long esp;                              /* The stack pointer of the process */
+    unsigned long addr_start;                       /* The initial address of the process */
+    unsigned long args;                             /* The pointer to the arguments in the stack */
+    struct process_control_block *next;             /* The next pcb in the queue if any */
+    struct process_control_block *prev;             /* The prev pointer */
+    struct process_control_block *wait_head;        /* The head pointer of the waiting processes */
+    struct process_control_block *wait_tail;        /* The tail pointer of the waiting processes */
+    struct process_control_block *waiting_on;       /* The process currently waiting on another process */
+    sighandler_t sigTable[SIG_TABLE_SIZE];          /* The signal table of a process */
+    fd_t fdt[FD_TABLE_SIZE];                        /* The file descriptor table of a process */
 } pcb_t;
 
 typedef struct struct_ps processStatuses;
@@ -144,8 +143,6 @@ typedef struct signal_context_frame {
 
 // device structure
 typedef struct devsw_struct {
-    int dvnum;
-    char *dvname;
     int (*dvopen)(pcb_t *);
     int (*dvclose)(pcb_t *);
     int (*dvread)(pcb_t *, void *, int);
