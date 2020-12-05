@@ -2,9 +2,12 @@
 #include <di_calls.h>
 #include <zerorand.h>
 #include <kbd.h>
+#include <i386.h>
 
 /* device table */
 devsw devtab[DEV_TABLE_SIZE];
+
+extern char * maxaddr;
 
 ////////////////////////////////////////////////////////////
 void devinit() {
@@ -21,7 +24,7 @@ int di_open(pcb_t *pcb, int device_no) {
     PRINT("OPEN pid: %d, device no: %d\n", pcb->pid, device_no);
 
     // check device_no
-    if (device_no < 0 || device_no > DEV_TABLE_SIZE) {
+    if (device_no < 0 || device_no >= DEV_TABLE_SIZE) {
         return DEV_FAIL;
     }
 
@@ -53,7 +56,7 @@ int di_close(pcb_t *pcb, int fd) {
     PRINT("CLOSE pid: %d, fd: %d\n", pcb->pid, fd);
 
     // check if fd is valid
-    if (fd < 0 || fd > FD_TABLE_SIZE) return DEV_FAIL;
+    if (fd < 0 || fd >= FD_TABLE_SIZE) return DEV_FAIL;
 
     // check for device 
     dev = pcb->fdt[fd].dev;
@@ -71,8 +74,21 @@ int di_write(pcb_t *pcb, int fd, void *buff, int bufflen) {
 
     PRINT("WRITE pid: %d, fd: %d, bufflen: %d\n", pcb->pid, fd, bufflen);
 
+    // bufflen should not be negative
+    if (bufflen < 0) {
+        return DEV_FAIL;
+    }
+
+    // Check if address is in the hole
+    if (((unsigned long) buff) >= HOLESTART && ((unsigned long) buff <= HOLEEND)) 
+        return DEV_FAIL;
+
+    //Check if address of the data structure is beyond the end of main memory
+    if ((((char * ) buff) + sizeof(processStatuses)) > maxaddr)  
+        return DEV_FAIL;
+
     // check if fd is valid
-    if (fd < 0 || fd > FD_TABLE_SIZE) return DEV_FAIL;
+    if (fd < 0 || fd >= FD_TABLE_SIZE) return DEV_FAIL;
 
     // check for device 
     dev = pcb->fdt[fd].dev;
@@ -87,8 +103,21 @@ int di_read(pcb_t *pcb, int fd, void *buff, int bufflen) {
 
     PRINT("READ pid: %d, fd: %d, bufflen: %d\n", pcb->pid, fd, bufflen);
 
+    // bufflen should not be negative
+    if (bufflen < 0) {
+        return DEV_FAIL;
+    }
+
+    // Check if address is in the hole
+    if (((unsigned long) buff) >= HOLESTART && ((unsigned long) buff <= HOLEEND)) 
+        return DEV_FAIL;
+
+    //Check if address of the data structure is beyond the end of main memory
+    if ((((char * ) buff) + sizeof(processStatuses)) > maxaddr)  
+        return DEV_FAIL;
+
     // check if fd is valid
-    if (fd < 0 || fd > FD_TABLE_SIZE) return DEV_FAIL;
+    if (fd < 0 || fd >= FD_TABLE_SIZE) return DEV_FAIL;
 
     // check for device 
     dev = pcb->fdt[fd].dev;
@@ -104,7 +133,17 @@ int di_ioctl(pcb_t *pcb, int fd, unsigned long command, void *ap) {
     PRINT("IOCTL pid: %d, fd: %d, command: %d\n", pcb->pid, fd, command);
 
     // check if fd is valid
-    if (fd < 0 || fd > FD_TABLE_SIZE) return DEV_FAIL;
+    if (fd < 0 || fd >= FD_TABLE_SIZE) return DEV_FAIL;
+
+    if (ap == NULL) return DEV_FAIL;
+
+     // Check if address is in the hole
+    if (((unsigned long) ap) >= HOLESTART && ((unsigned long) ap <= HOLEEND)) 
+        return DEV_FAIL;
+
+    //Check if address of the data structure is beyond the end of main memory
+    if ((((char * ) ap) + sizeof(processStatuses)) > maxaddr)  
+        return DEV_FAIL;
 
     // check for device 
     dev = pcb->fdt[fd].dev;

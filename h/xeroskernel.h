@@ -5,18 +5,8 @@
 
 #include <constants.h>
 
-/* defines for testing */
-
-// #define TEST /* Comment/Uncomment this line for testing. */
-#ifdef TEST
-
-/* run the test based on test case */
-extern void run_test(void);
-
-#endif
-
 /* Console Printing */
-#define CONSOLE_PRINTING /* Comment/Uncomment this line to print on console */
+// #define CONSOLE_PRINTING /* Comment/Uncomment this line to print on console */
 
 /* For Debugging ONLY */
 // #define IS_DEBUG /* Comment/Uncomment this line to print DEBUG messages */
@@ -367,7 +357,7 @@ extern int syswait(pid_t pid);
  * @brief Call to open a device.
  * 
  * @param {device_no} The device number to open.
- * @returns -1 if an error occurred, 0 otherwise.
+ * @returns -1 if an error occurred, else fd otherwise.
  */
 extern int sysopen(int device_no);
 

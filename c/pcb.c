@@ -115,7 +115,6 @@ void setPriority(pid_t pid, int priority) {
 ////////////////////////////////////////////////////////////
 void removeFromReadyQueue(pcb_t *pcb) {
     // adjust pointers
-
     if (pcb->prev == NULL) {
         // if prev is NULL, then it is in front
         head[pcb->priority] = pcb->next;
@@ -132,7 +131,7 @@ void removeFromReadyQueue(pcb_t *pcb) {
 int removeFromQueue(pcb_t *pcb) {
     int state = pcb->state;
 
-    PRINT("PCB stats, pid: %d, next: %d, addr: %d\n", pcb->pid, pcb->next, pcb);
+    PRINT("PCB stats, pid: %d, prev: %d, next: %d, addr: %d\n", pcb->pid, pcb->prev, pcb->next, pcb);
 
     switch (state) {
         case STATE_SLEEP:

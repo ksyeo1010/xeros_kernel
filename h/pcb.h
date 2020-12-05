@@ -105,7 +105,7 @@ extern int removeFromQueue(pcb_t *pcb);
  * @param {pcb} The process to set the handler.
  * @param {signum} The signal number to set.
  * @param {handler} The handler itself.
- * @returns SYS_FAIL if an error occurs, otherwise the previous sighandler is returned.
+ * @returns NULL if an error occurs, otherwise the previous sighandler is returned.
  */
 extern sighandler_t set_signal(pcb_t *pcb, int signum, sighandler_t handler);
 
@@ -159,5 +159,13 @@ extern void restoreToReadyQueue(pcb_t *pcb);
  * @returns The highest bit turned on.
  */
 extern int getsig(int bits);
+
+/**
+ * @brief Given a 32-bit integer, gets the lowest bit turned on.
+ * 
+ * @param {bits} The 32-bit integer.
+ * @returns The lowest bit turned on.
+ */
+extern int getsig_low(int bits);
 
 #endif

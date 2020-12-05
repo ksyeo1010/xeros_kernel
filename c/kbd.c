@@ -181,7 +181,7 @@ void kbdint_handler() {
         b = inb(PORT_READ);
         c = kbtoa(b);
 
-        PRINT("c char: %c, c code: %d\n", b, c, c);
+        PRINT("c char: %c, c code: %d\n", c, c);
 
         // add to buffer
         if (kbd.buff_ind < BUF_LEN) {
@@ -190,6 +190,9 @@ void kbdint_handler() {
                 kbd.eof_flag = KBD_ON;
                 kbd.buff_ind++;
                 enable_irq(KBD_IRQ, 1);
+
+                // print if echo is on
+                if (kbd.echo) kprintf("%c", kbd.eof);
             } else if (c != 0) {
                 kbd.buf[kbd.buff_ind] = c;
                 kbd.buff_ind++;

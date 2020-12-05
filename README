@@ -25,4 +25,23 @@ the resulting image by executing the bochs command in this directory
 Once bochs is running, choose option 6 to start the simulation and to
 load and run the created image.
 
+##########################################################################
 
+ADDITIONAL COMMENTS
+
+- The keyboard device scan code is mostly and roughly made from from the one
+  given in scancodestoASCII.txt file.
+
+- The shell, every command with different number of arguments will be ignored.
+  If any signals occur while waiting for a command it will ignore everything
+  that the kbd buffer had and the shell will prompt for a command again.
+  The same will happen if the buffersize gets full while writing a command.
+  All spaces will be ignored, this means "p          " is a valid command.
+  The commands won't work with upper cases as it was not specified in the pdf.
+  
+- The test part in the shell will not perform argument checking. It is only
+  used for the testing part and should not mess the original content.
+
+- Uncomment line 8 in <xeroskernel.h>, this will print in the console as well.
+  If anything is slow to respond back, use this for testing purporses. should
+  not modify anything at all except for printing to the console as well.

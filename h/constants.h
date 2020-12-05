@@ -137,7 +137,7 @@ typedef struct signal_context_frame {
     unsigned long returnAddr;
     unsigned long handlerAddr;
     unsigned long contextFramePtr;
-    unsigned long prevSigNum;
+    unsigned long prevSigShift;
     unsigned long returnValue;
 } sigframe_t;
 

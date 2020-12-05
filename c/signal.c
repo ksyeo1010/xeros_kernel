@@ -13,16 +13,16 @@ extern char * maxaddr;
 sighandler_t set_signal(pcb_t *pcb, int signum, sighandler_t handler) {
     // check if signum within limits
     if (signum < 0 || signum >= (SIG_TABLE_SIZE - 1)) {
-        return FAILED;
+        return NULL;
     }
 
     // check if addr is valid
     if (((unsigned long) handler) >= HOLESTART && ((unsigned long) handler <= HOLEEND)) 
-        return FAILED;
+        return NULL;
 
     //Check if address of the data structure is beyone the end of main memory
     if ((((char * ) handler) + sizeof(processStatuses)) > maxaddr)  
-        return FAILED;
+        return NULL;
 
     PRINT("pid: %d, signum: %d, handler: %d.\n", pcb->pid, signum, (unsigned long) handler);
 
@@ -53,6 +53,8 @@ int signal(pid_t pid, int signum) {
     if (signum < 0 || signum > (SIG_TABLE_SIZE - 1)) return SIG_FAIL;
     // if signal does not exists
     if (target->sigTable[signum] == NULL) return SIG_FAIL;
+    // if target is stopped
+    if (target->state == STATE_STOPPED) return SIG_NOT_EXISTS;
 
     if ((target->sig_mask & (0x1 << signum)) == 0) {
         target->sig_ignored = target->sig_ignored | (0x1 << signum);
@@ -79,11 +81,11 @@ int signal(pid_t pid, int signum) {
 
         sig_frame->handlerAddr = (unsigned long) target->sigTable[signum];
         sig_frame->contextFramePtr = target->esp;
-        sig_frame->prevSigNum = signum;
+        sig_frame->prevSigShift = (signum - getsig_low(target->sig_mask));
         sig_frame->returnValue = target->rc;
 
         target->esp = (unsigned long) sig_frame;
-        target->sig_mask = target->sig_mask << signum;
+        target->sig_mask = target->sig_mask << sig_frame->prevSigShift;
 
         PRINT("sig frame stats, addr: %d, ctx frame ptrs: %d, signum: %d, sig mask: 0x%x, handler: %d, ret addr: %d\n", 
             target->esp, sig_frame->contextFramePtr, signum, target->sig_mask, sig_frame->handlerAddr, sig_frame->ctx.esp);
@@ -102,6 +104,8 @@ int addToWaitQueue(pcb_t *pcb, pid_t pid) {
     pcb_t *target = getPCB(pid);
 
     if (pid == 0) return SIG_FAIL;
+
+    if (pcb->pid == pid) return SIG_FAIL;
 
     if (target == NULL) return SIG_FAIL;
 
@@ -154,13 +158,26 @@ void restoreToReadyQueue(pcb_t *pcb) {
     }
 }
 
+////////////////////////////////////////////////////////////
 int getsig(int bits) {
     int i;
-    for (i = SIG_TABLE_SIZE - 1; i >=0; i++) {
+    for (i = SIG_TABLE_SIZE - 1; i >= 0; i--) {
         if (bits & 0x80000000) {
             break;
         }
         bits = bits << 1;
+    }
+    return i;
+}
+
+////////////////////////////////////////////////////////////
+int getsig_low(int bits) {
+    int i;
+    for (i = 0; i < SIG_TABLE_SIZE; i++) {
+        if (bits & 0x00000001) {
+            break;
+        }
+        bits = bits >> 1;
     }
     return i;
 }

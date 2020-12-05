@@ -129,7 +129,9 @@ void dispatch() {
             case SYS_WAIT:
                 ap = (va_list) pcb->args;
                 pcb->rc = addToWaitQueue(pcb, va_arg(ap, pid_t));
-                pcb = next();
+                if (pcb->rc != SIG_FAIL) {
+                    pcb = next();
+                }
                 break;
             case SYS_OPEN:
                 ap = (va_list) pcb->args;

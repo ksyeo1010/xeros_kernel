@@ -38,8 +38,10 @@ void sleep(pcb_t *pcb, unsigned int milliseconds) {
             pcb->next = p;
             if (p->prev == NULL) {
                 dl = pcb;
+                p->prev = pcb;
+            } else {
+                pcb->prev = p->prev;
             }
-            p->prev = pcb;
             return;
         }
 
@@ -83,6 +85,7 @@ void tick() {
         next = dl->next;
         ready(dl);
         dl = next;
+        dl->prev = NULL;
     }
 }
 
@@ -94,6 +97,11 @@ void removeFromSleepQueue(pcb_t *pcb) {
     // get sum of all ticks
     for (p = pcb->prev; p != NULL; p = p->prev) {
         pcb->tick += p->tick;
+    }
+
+    if (pcb->prev == NULL && pcb->next == NULL) {
+        dl = NULL;
+        return;
     }
 
     // adjust pointers

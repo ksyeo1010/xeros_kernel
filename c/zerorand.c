@@ -28,7 +28,7 @@ int zero_close(pcb_t *pcb) {
 
 ////////////////////////////////////////////////////////////
 int zero_read(pcb_t *pcb, void *buf, int bufflen) {
-    memset(buf, '\0', bufflen);
+    memset(buf, 0, bufflen);
     return bufflen;
 }
 
@@ -81,7 +81,7 @@ int rand_read(pcb_t *pcb, void *buf, int bufflen) {
     // write remaining bytes
     if ((bufflen % 4) > 0) {
         r = rand();
-        char *dup2 = (char *) (buf + bufflen/4);
+        char *dup2 = (char *) (dup + i);
         for (i = 0; i < (bufflen % 4); i++) {
             *(dup2 + i) = (char) (r >> (8*i));
         }

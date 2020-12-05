@@ -90,6 +90,7 @@ int V_kern(int semNo) {
 void removeFromBlockQueue(pcb_t *pcb) {
     if (pcb->semNo < 0 || pcb->semNo >= NUM_SEMAPHORES) {
         FAIL("Should not happen.\n");
+        return;
     }
 
     semaphore_t *sp = &semaphores[pcb->semNo];

@@ -26,8 +26,8 @@ file.
 
 
 STUDENT  1
-Name :
-St. No:
+Name : Kwangsoo Yeo
+St. No: 53033149
 
 
 STUDENT  2

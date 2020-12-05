@@ -29,8 +29,8 @@ typedef struct kbd_struct {
     char eof;
     int eof_flag;
     int buff_ind;
-    char buf[BUF_LEN];
     pcb_t *pcb;
+    char buf[BUF_LEN];
 } kbd_t;
 
 /* kbd device functions */

@@ -1,9 +1,731 @@
+Running the tests:
+We are to take advantage of the shell we created in this assignment. The tests are run after
+setting the username/pass with the command:
+test {test_name}
+where test is the command and {test_name} is the name of the test to run.
+The tests name are going to match the following bellow.
 
-This file is to include your testing documentation. The file is to be
-in plain text ASCII and properly spaced and edited so that when it is
-viewed on a Linux machine it is readable. Not all ASCII files created
-on a Windows machine display as expected due to the differences with
-respect to how new lines and carriage returns are treated. Line widths
-are to be limited to 80 characters.
+Tests
+1. signalpriority   [PASSED]
+2. signalhandler    [PASSED]
+3. syskill          [PASSED]
+4. syswait          [PASSED]
+5. sysopen          [PASSED]
+6. syswrite         [PASSED]
+7. sysioctl         [PASSED]
+8. sysread          [PASSED]
+9. zero device      [PASSED]
+10. randdevice      [PASSED]
+11. kbdeof          [PASSED]
 
+HELPERS: 4 functions defined here will be used to test the cases below.
+void sig3(void) {
+    for (int i = 0; i < 3; i++) {
+        sysputs("Signal 3.\n");
+        syssleep(1000);
+    }
+}
 
+void sig10(void) {
+    sysputs("Signal 10.\n");
+    syssleep(1000);
+}
+
+void sig22(void) {
+    for (int i = 0; i < 5; i++) {
+        sysputs("Signal 22.\n");
+        syssleep(1000);
+    }
+}
+
+void sig23(void) {
+    sysputs("Signal 23.\n");
+    syssleep(1000);
+}
+
+----------------------------------------------------------
+[PASSED]
+1. signalpriority
+
+Description: 
+This test tests the priority of signals. First we create 4 signals with signal numbers:
+3, 10, 22, 23. Signal 3 prints its signal and waits for a second, 3 times. Signal 10
+prints its signal and sleeps. Signal 22 prints its signal and sleeps 5 times. Finally
+signal 23 prints and sleeps. We create another function that will trigger this signals.
+We trigger in this order 3 -> wait 1 second -> 22 -> 10 -> wait 2 seconds -> 23.
+
+Test case:
+void test_trigger_signal(void) {
+    // trigger signals
+    syskill(pid_g, 3);
+    syssleep(1000);
+    syskill(pid_g, 22);
+    syskill(pid_g, 10);
+    syssleep(2000);
+    syskill(pid_g, 23);
+}
+
+void test_signal_priority(void) {
+    unsigned int pid;
+    char buf[128];
+    pid_g = sysgetpid();
+
+    sprintf(buf, "My pid is %d.\n", pid_g);
+    sysputs(buf);
+
+    // create 4 signal handlers
+    syssignal(3, (sighandler_t) sig3);
+    syssignal(10, (sighandler_t) sig10);
+    syssignal(22, (sighandler_t) sig22);
+    syssignal(23, (sighandler_t) sig23);
+
+    // create and wait
+    pid = syscreate(test_trigger_signal, STACKSIZE);
+    syswait(p
+
+Output:
+My pid is 3.
+Signal 3.
+Signal 22.
+Signal 22.
+Signal 23.
+Signal 22.
+Signal 22.
+Signal 22.
+Signal 10.
+Signal 3.
+Signal 3.
+
+Pass/Fail: [PASSED]
+We can see that we trigger first signal 3, then wait for a second. Signal 3 prints
+for a second and then two triggers come in while signal 3 is waiting. Signal 22 is put
+now at highest priority and 10 is ignored. While signal 22 prints for 2 cycles, signal
+23 is triggered and priority is moved over. Signal 23 finished, then signal 22 does 
+its remaining cycles. When it is done, it is going to see the signal 10 ignored and
+put it before 3. After that signal 3 is printed.
+
+----------------------------------------------------------
+[PASSED]
+2. signalhandler
+
+Description: 
+Initially, we try to modify signalhandler 31 and then some random negative number.
+Then set a signal for signal number 3. We expect the return value to be 0 since
+there is no signal set previously. We overwrite signal number 3 with the sig23 function
+and compare both the return value and sig3 function address. We run the signal to see
+it was overwritten successfully.
+
+Test case:
+void test_signal_handler(void) {
+    unsigned int pid;
+    char buf[128];
+    int ret;
+
+    pid = sysgetpid();
+
+    sprintf(buf, "My pid is %d.\n", pid);
+    sysputs(buf);
+
+    // create a signal handler
+    ret = syssignal(3, (sighandler_t) sig3);
+    sprintf(buf, "Previous sig handler: %d.\n", ret);
+    sysputs(buf);
+
+    // modify the same handler
+    ret = syssignal(3, (sighandler_t) sig23);
+    sprintf(buf,"Previous sighandler: %d, sig3 sighandler: %d.\n", ret, sig3);
+    sysputs(buf);
+
+    // run
+    syskill(pid, 3);
+}
+
+Output: NOTE: ret code for syssignal on failure has been modified to return -1.
+My pid is 3.
+Tried to set signal 31. ret code: 0.
+Tried to set signal -1. ret code: 0.
+Previous sig handler: 0.
+Previous sighandler: 13132, sig3 sighandler: 13132.
+Signal 23.
+
+Pass/Fail: [PASSED]
+As above we can see that both signal handler 31 and -1 return -1 because they fail.
+Then we get signal handler 0. Then when we replace the same signal number
+with another function, we can see the return value being the same as the address of sig3.
+Finally since sig23 was the one replacing it, we see the correct output.
+
+----------------------------------------------------------
+[PASSED]
+3. syskill
+
+Description: 
+We test different cases, trying to signal the idle process, trying to signal non-existing
+process and trying to signal to a unmapped handler. After basic test cases, create a
+function that will setup a signal and sleep. The process creating this function will
+send a signal and the process should print the remaining milliseconds.
+
+Test case:
+void test_sleep(void){
+    int ret;
+    char buf[128];
+
+    // set signal 10
+    syssignal(10, (sighandler_t) sig10);
+
+    ret = syssleep(10000);
+    sprintf(buf, "Sleep was interrupted, remaining: %d.\n", ret);
+    sysputs(buf);
+}
+
+void test_sys_kill(void) {
+    unsigned int pid;
+    char buf[128];
+    int ret;
+
+    pid = sysgetpid();
+    sprintf(buf, "My pid is %d.\n", pid);
+    sysputs(buf);
+
+    // set something to 3
+    syssignal(3, (sighandler_t) sig3);
+
+    // try to signal idle process
+    ret = syskill(0, 3);
+    sprintf(buf, "Tried to signal idle process. ret code %d.\n", ret);
+    sysputs(buf);
+
+    // try to signal non existant process
+    ret = syskill(999, 3);
+    sprintf(buf, "Tried to signal process 999(non-existant). ret code %d.\n", ret);
+    sysputs(buf);
+
+    // try to signal valid signal but theres no handler
+    ret = syskill(pid, 4);
+    sprintf(buf, "Tried to signal unmapped signal 4. ret code %d.\n", ret);
+    sysputs(buf);
+
+    // try to signal sleeping process
+    pid = syscreate(test_sleep, STACKSIZE);
+    syssleep(1000); // time for sleep to setup
+    ret = syskill(pid, 10);
+    sprintf(buf, "Tried to signal sleeping process. ret code %d.\n", ret);
+    sysputs(buf);
+
+    syswait(pid);
+} 
+
+Output:
+My pid is 3.
+Tried to signal idle process. ret code -1.
+Tried to signal process 999(non-existing). ret code -999.
+Tried to signal unmapped signal 4. ret code -1.
+Tried to signal sleeping process. ret code 0.
+Signal 10.
+Sleep was interrupted, remaining: 9000.
+
+Pass/Fail: [PASSED]
+Signaling to the idle process should fail as expected, signaling to a non-existing process
+should fail as expected, signaling to a unmapped handler should fail as expected.
+Then we another process is created setting the signal handler and waiting for 10 
+seconds. The process calling the sleep function will wait for 1 second so the sleep
+function can setup and send out the signal. Once the signal is sent, it prints out
+9000, which is (10000 - 1000) the expected time.
+
+----------------------------------------------------------
+[PASSED]
+4. syswait
+
+Description: 
+Similar with test number 3, we try to test on waiting for the idle process, waiting 
+on a process that doesn't exist and waiting on itself. After that, it tests to signal
+when another process is on a syswait.
+
+Test case:
+void test_wait_sleep(void) {
+    syssleep(10000);
+}
+
+void test_wait_int(void) {
+    int pid;
+    int ret;
+    char buf[128];
+
+    // set signal 10
+    syssignal(10, (sighandler_t) sig10);
+
+    pid = syscreate(test_wait_sleep, STACKSIZE);
+    ret = syswait(pid);
+
+    sprintf(buf, "Wait interrupted: %d.\n", ret);
+    sysputs(buf);
+}
+
+void test_sys_wait(void) {
+    unsigned int pid;
+    char buf[128];
+    int ret;
+
+    pid = sysgetpid();
+    sprintf(buf, "My pid is %d.\n", pid);
+    sysputs(buf);
+
+    // try to wait on idle process
+    ret = syswait(0);
+    sprintf(buf, "Tried to wait on idle process. ret code: %d.\n", ret);
+    sysputs(buf);
+
+    // try to wait on non-existant process
+    ret = syswait(999);
+    sprintf(buf, "Tried to wait on process 999(non-existing). ret code: %d.\n", ret);
+    sysputs(buf);
+
+    // try to wait on itself
+    ret = syswait(pid);
+    sprintf(buf, "Tried to wait on itself. ret code: %d.\n", ret);
+    sysputs(buf);
+
+    // set up a process thats on wait and signal it.
+    pid = syscreate(test_wait_int, STACKSIZE);
+    syssleep(1000);
+    syskill(pid, 10);
+    syswait(pid);
+}
+
+Output:
+My pid is 3.
+Tried to wait on idle process. ret code: -1.
+Tried to wait on process 999(non-existing). ret code: -1.
+Tried to wait on itself. ret code: -1.
+Signal 10.
+Wait interrupted: -777.
+
+Pass/Fail: [PASSED]
+All tests on waiting on idle process, a non existing process and on itself return -1
+as expected. Later the process creates a subprocess that waits on another process that
+is doing a syssleep for 10000. When the process sends a signal, the wait is interrupted
+and a -777 is returned as expected.
+
+----------------------------------------------------------
+[PASSED]
+5. sysopen
+
+Description: 
+Try to open devices with negative number or greater than 2. Try to open the keyboard 
+device again (this should be open from the shell so it would fail). Then we try opening
+5(greater than current capacity) fds, where we fill up the fd table with zero device.
+Finally close them again.
+
+Test case:
+void test_sys_open(void) {
+    unsigned int pid;
+    char buf[128];
+    int ret;
+    int fds[5];
+
+    pid = sysgetpid();
+    sprintf(buf, "My pid is %d.\n", pid);
+    sysputs(buf);
+
+    // try on negative numbers
+    ret = sysopen(-1);
+    sprintf(buf, "Tried to open device no -1. ret code: %d.\n", ret);
+    sysputs(buf);
+
+    // try on num > 2
+    ret = sysopen(3);
+    sprintf(buf, "Tried to open device no 3. ret code: %d.\n", ret);
+    sysputs(buf);
+
+    // try to open num 2 again. this should be already open from the shell
+    ret = sysopen(2);
+    sprintf(buf, "Tried to open keyboard while it is open. ret code: %d.\n", ret);
+    sysputs(buf);
+
+    // try to open more that 4 fd
+    for (int i = 0; i < 5; i++) {
+        fds[i] = sysopen(0);
+        sprintf(buf, "Opening zero device. fd: %d.\n", fds[i]);
+        sysputs(buf);
+    }
+
+    // close all
+    for (int i = 0; i < 5; i++) {
+        ret = sysclose(fds[i]);
+        sprintf(buf, "Closing zero device. fd: %d.\n", ret);
+        sysputs(buf);
+    }
+}
+
+Output:
+My pid is 3.
+Tried to open device no -1. ret code: -1.
+Tried to open device no 3. ret code: -1.
+Tried to open keyboard while it is open. ret code: -1.
+Opening zero device. fd: 0.
+Opening zero device. fd: 1.
+Opening zero device. fd: 2.
+Opening zero device. fd: 3.
+Opening zero device. fd: -1.
+Closing zero device. fd: 0.
+Closing zero device. fd: 0.
+Closing zero device. fd: 0.
+Closing zero device. fd: 0.
+Closing zero device. fd: -1.
+
+Pass/Fail: [PASSED]
+Opening up a device with number -1, 3 or the same keyboard device again should fail and
+return -1 as expected. Then, we try to open 5 zero devices, the first 4 give the corresponding
+fd while the last one fails because the fd is filled up. When closing the first 4 close
+correctly while the last one which had a fd of -1 fails as expected.
+
+----------------------------------------------------------
+[PASSED]
+6. syswrite
+
+Description: 
+Initially try to write to an unopened device. This would cause an error. Then we open
+6 times (where in general only 4 should have succeeded) and set our process fd table
+to contain [-1, 0, 1, 2, 3, 4]. From here we try to write to each of these fd values.
+
+Test case:
+void test_sys_write(void) {
+    unsigned int pid;
+    char buf[128];
+    int ret;
+    int fds[6];
+    char dev_buf[128];
+
+    pid = sysgetpid();
+    sprintf(buf, "My pid is %d.\n", pid);
+    sysputs(buf);
+
+    // try to write to unset fd
+    fds[0] = 0;
+    ret = syswrite(fds[0], dev_buf, 128);
+    sprintf(buf, "Tried to write to unset fd. ret code: %d.\n", ret);
+    sysputs(buf);
+
+    // fill in fds
+    for (int i = 0; i <= 5; i++) {
+        sysopen(0);
+        fds[i] = i-1;
+    }
+
+    // fd should be from -1 to 4, try to write to each of them
+    for (int i = 0; i <= 5; i++) {
+        ret = syswrite(fds[i], dev_buf, 128);
+        sprintf(buf, "Writing to fd %d, ret code: %d.\n", fds[i], ret);
+        sysputs(buf);
+    }
+}
+
+Output:
+My pid is 3.
+Tried to write to unset fd. ret code: -1.
+Writing to fd -1, ret code: -1.
+Writing to fd 0, ret code: 128.
+Writing to fd 1, ret code: 128.
+Writing to fd 2, ret code: 128.
+Writing to fd 3, ret code: 128.
+Writing to fd 4, ret code: -1.
+
+Pass/Fail: [PASSED]
+As expected, the write to an unopened device should fail. Following this, when there are
+all 4 fds opened, we know fds from 0~3 are correct values. A write to -1 should give
+the return code -1 similar to write to 4. The writes to 0~3 should give the length written
+which in this case was 128.
+
+----------------------------------------------------------
+[PASSED]
+7. sysioctl
+
+Description: 
+Test ioctl on the zero device, and also try to set icotl on the rand device with correct
+command number and incorrect command number. (Actual device testings are done later.)
+
+Test case:
+void test_sys_ioctl(void) {
+    unsigned int pid;
+    char buf[128];
+    int ret;
+    int fd;
+
+    pid = sysgetpid();
+    sprintf(buf, "My pid is %d.\n", pid);
+    sysputs(buf);
+
+    // test ioctl on zero device
+    fd = sysopen(0);
+    ret = sysioctl(fd, 23);
+    sprintf(buf, "Tried ioctl on zero device. ret code: %d.\n", ret);
+    sysputs(buf);
+    sysclose(fd);
+
+    // test ioctl on rand device invalid command
+    fd = sysopen(1);
+    ret = sysioctl(fd, 12);
+    sprintf(buf, "Tried ioctl with command 12 on rand device. ret code: %d.\n", ret);
+    sysputs(buf);
+
+    // test with valid command
+    ret = sysioctl(fd, 23, 2);
+    sprintf(buf, "Tried ioctl with command 23 on rand device. ret code: %d.\n", ret);
+    sysputs(buf);
+    sysclose(fd);
+}
+
+Output:
+My pid is 3.
+Tried ioctl on zero device. ret code: -1.
+Tried ioctl with command 12 on rand device. ret code: -1.
+Tried ioctl with command 23 on rand device. ret code: 0.
+
+Pass/Fail: [PASSED]
+Zero device should return -1 as ioctl is not defined, while rand device should return
+-1 when the command is not 23, otherwise the return code of 0 is the correct value
+to return.
+
+----------------------------------------------------------
+[PASSED]
+8. sysread
+
+Description: 
+This will be an interactive test case, meaning the user will have to input into the
+kbd to get some test results. First it will open the kbd device and wait for 5 seconds
+for any keyboard interrupts (possibly filling the kbd buffer would be good). 
+Then we read the keyboard one by one and print the characters. That means we have cleared
+the buffer if any input isn't given again. Now we wait again for 5 seconds and expect
+some values typed into the buffer (2 or more characters will be good). Next read the next
+2 values in the buffer and print.
+
+Test case:
+void test_sys_read(void) {
+    unsigned int pid;
+    char buf[128];
+    char kbd_buf[128];
+    int fd;
+
+    pid = sysgetpid();
+    sprintf(buf, "My pid is %d.\n", pid);
+    sysputs(buf);
+
+    // open the keyboard
+    fd = sysopen(2);
+
+    // start interactive testing, kbd is open should be listening to kbd commands
+    sysputs("Starting interactive testing.\n");
+    sysputs("Sleeping for 5 seconds, type anything.\n");
+    syssleep(5000);
+
+    sysputs("Typed characters: ");
+    for (int i = 0; i < 4; i++) {
+        sysread(fd, kbd_buf, 1);
+        sprintf(buf, "%c ", *kbd_buf);
+        sysputs(buf);
+    }
+    sysputs("\n");
+
+    sysputs("Sleeping for 5 seconds, type anything.\n");
+    syssleep(5000);
+    sysread(fd, kbd_buf, 2);
+    sprintf(buf, "Two characters read: %s.\n", kbd_buf);
+    sysputs(buf);
+
+    sysclose(fd);
+}
+
+Output:
+My pid is 3.
+Starting interactive testing.
+Sleeping for 5 seconds, type anything.
+Typed characters: a s d f
+Sleeping for 5 seconds, type anything.
+Two characters read: qw.
+
+Pass/Fail: [PASSED]
+While we wait we input asdf(or more it should not be read). After that it will print
+all the four characters reading them on by one. As long as read request is less than
+the kbd buffer size, we will input something directly. The next time we wait, if we
+enter an input (in my test case was qwer), we print the first two characters (again 
+read request < kbd buffer size) so we print the first two characters read.
+
+----------------------------------------------------------
+[PASSED]
+9. zerodevice
+
+Description: 
+Try to read/write negative buffer lengths, this should fail. Also for a read, we have
+a buffer z_buf initiall with values "12345678", we try to read 7 bytes starting from
+index of 2 (z_buf+1), sequentially those values starting from 2 should be now the zero
+value. Also for write we just test to see if we get correct length of "writes" done.
+
+Test case:
+void test_zero_device(void) {
+    unsigned int pid;
+    char buf[128];
+    char z_buf[128];
+    int fd, ret;
+
+    pid = sysgetpid();
+    sprintf(buf, "My pid is %d.\n", pid);
+    sysputs(buf);
+
+    // open the 0 device
+    fd = sysopen(0);
+
+    // a read of negative number
+    ret = sysread(fd, z_buf, -1);
+    sprintf(buf, "Tried to read negative number of bytes. ret code: %d.\n", ret);
+    sysputs(buf);
+
+    // read 7 bytes
+    sprintf(z_buf, "12345678");
+    sprintf(buf, "Current values in z_buf: %s.\n", z_buf);
+    sysputs(buf);
+    ret = sysread(fd, (z_buf+1), 7);
+    sprintf(buf, "Read of 7 bytes. length: %d, z_buf: %s.\n", ret, z_buf);
+    sysputs(buf);
+
+    // a write of negative number
+    ret = syswrite(fd, z_buf, -1);
+    sprintf(buf, "Tried to write negative number of bytes. ret code: %d.\n", ret);
+    sysputs(buf);
+
+    // write 10 bytes
+    ret = syswrite(fd, z_buf, 10);
+    sprintf(buf, "Write of 10 bytes. length: %d.\n", ret);
+    sysputs(buf);
+}
+
+Output:
+My pid is 3.
+Tried to read negative number of bytes. ret code: -1.
+Current values in z_buf: 12345678.
+Read of 7 bytes. length: 7, z_buf: 1.
+Tried to write negative number of bytes. ret code: -1.
+Write of 10 bytes. length: 10.
+
+Pass/Fail: [PASSED]
+Reading and writing negative buffer lengths should return -1 as expected. Also when reading
+starting from (z_buf+1), 7 bytes, we get the length 7 returned and then the z_buf starting
+at (z_buf+1) is cleared, or zeroed out as expected. The write operation returns the length
+back as expected.
+
+----------------------------------------------------------
+[PASSED]
+10. randdevice
+
+Description: 
+For each call to this test, we set the seed the be the current pid. This allows us to
+get different random numbers each call. Each call tries to read one byte, 4 bytes and
+6 bytes. This allows to test reading bytes that are divisble by 4 and not divisible
+by 4. 
+
+Test case:
+void test_rand_device(void) {
+    unsigned int pid;
+    char buf[128];
+    char r_buf[128];
+    int fd, ret;
+
+    pid = sysgetpid();
+    sprintf(buf, "My pid is %d.\n", pid);
+    sysputs(buf);
+
+    // open rand device
+    fd = sysopen(1);
+
+    // set ioctl to current pid
+    ret = sysioctl(fd, 23, pid);
+
+    // syswrite should fail
+    ret = syswrite(fd, r_buf, 1);
+    sprintf(buf, "Tried to write to rand device. ret code: %d.\n", ret);
+    sysputs(buf);
+
+    // read one byte
+    ret = sysread(fd, r_buf, 1);
+    sprintf(buf, "Reading rand device. length: %d, number: %d.\n", ret, *(unsigned char *)r_buf);
+    sysputs(buf);
+
+    // read 4 bytes
+    ret = sysread(fd, r_buf, 4);
+    sprintf(buf, "Reading rand device. length: %d, number: %d.\n", ret, *(int *)r_buf);
+    sysputs(buf);
+
+    // read 6 bytes
+    ret = sysread(fd, r_buf, 6);
+    sprintf(buf, "Reading rand device. length: %d, number 1: %d, number 2: %d.\n", ret, *(int *)r_buf, *(unsigned short *)(r_buf + 4));
+    sysputs(buf);
+
+    sysclose(fd);
+}
+
+Output:
+My pid is 3.
+Tried to write to rand device. ret code: -1.
+Reading rand device. length: 1, number: 140.
+Reading rand device. length: 4, number: 22817.
+Reading rand device. length: 6, number 1: 10239, number 2: 12914.
+
+My pid is 3.
+Tried to write to rand device. ret code: -1.
+Reading rand device. length: 1, number: 83.
+Reading rand device. length: 4, number: 7107.
+Reading rand device. length: 6, number 1: 10365, number 2: 8312.
+
+Pass/Fail: [PASSED]
+For the 1 byte, we print it as a unsigned byte, for 4 bytes we print it as int and for
+2 bytes we read it as unsigned short. Writing to rand device fails as expected while 
+the the remaining test cases return the corresping length read, and corresponding random
+number(s). 
+NOTE: Although I am not sure if the rand are correct numbers, each call with a different
+seed produces different results so this is marked as passed.
+
+----------------------------------------------------------
+[PASSED]
+11. kbdeof
+
+Description: 
+Test to see if the keyboard eof can be changed. Once it is changed, check to see
+if the keyboard eof returned is the one we changed to. This test is interactive as well
+where a user should input some characters and press ctrl-d to see the correct results.
+
+Test case:
+void test_kbd_eof(void) {
+    unsigned int pid;
+    char buf[128];
+    char k_buf[128];
+    int fd, ret;
+
+    pid = sysgetpid();
+    sprintf(buf, "My pid is %d.\n", pid);
+    sysputs(buf);
+
+    // interactive test for kbd eof
+    fd = sysopen(2);
+    // echo on for testing purposes
+    ret = sysioctl(fd, 74);
+
+    // set oef to +
+    ret = sysioctl(fd, 18, 43);
+
+    sysputs("Type up to 4 characters including one ctrl-d.\n");
+    ret = sysread(fd, k_buf, 4);
+    sprintf(buf, "\nRead characters. length: %d, string: %s.\n", ret, k_buf);
+    sysputs(buf);
+
+    sysclose(fd);
+}
+
+Output:
+My pid is 3.
+Type up to 4 characters including one ctrl-d.
+as+
+Read characters. length: 3, string: as+.
+
+Pass/Fail: [PASSED]
+First we wait until a user enters 4 characters. In this scenario, we type two characters
+as and then hit on ctrl-d. We set ctrl-d to be the ascii character '+' sign, which is
+the number 43. First typing as produces the echo of as and then ctrl-d print the '+'
+sign. After than we can see it correctly returned the results 'as+'.

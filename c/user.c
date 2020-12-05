@@ -3,7 +3,7 @@
 
 #include <xeroskernel.h>
 #include <xeroslib.h>
-
+#include <test.h>
 
 /* user and pass */
 #define USER            "cs415"
@@ -39,7 +39,7 @@ typedef struct tok_struct {
 /* commands */
 
 void p(void);
-void k(char *p_str);
+void k(char *p_str, unsigned int currpid, int fd);
 void a(void);
 void t(void);
 
@@ -68,6 +68,9 @@ void shell(void) {
     char buf[BUFFERSIZE];
     tok_t tok;
     unsigned int pid;
+    unsigned int currpid;
+
+    currpid = sysgetpid();
 
     for (;;) {
         buf_len = 0;
@@ -78,6 +81,8 @@ void shell(void) {
         sysioctl(fd, COMMAND_ECHO_ON);
 
         buf_len = sysread(fd, &buf[buf_len], BUFFERSIZE);
+
+        // kprintf("buf stats, len: %d, buf: %s", buf_len, buf);
         if (buf_len < 1) {
             // that means something occurred while reading
             // either it failed or was interrupted by a signal before return buffer was filled
@@ -101,8 +106,6 @@ void shell(void) {
         }
 
         len = token(buf, &tok);
-
-        // kprintf("buf stats, len: %d, buf: %s", buf_len, buf);
         // kprintf("tok stats len: %d, ind: %d, state: %d, detach: %d, str: %s\n", len, tok.ind, tok.state, tok.detach, tok.str);
 
         if (tok.state == TOK_EOF) {
@@ -113,35 +116,61 @@ void shell(void) {
         if (len > 0) {
             if (strcmp(X_CMD, tok.str) == 0) { 
                 // x command
-                sysclose(fd);
-                return;
+                if ((tok.state == TOK_ENTER) || (tok.state == TOK_EOF)) {
+                    sysclose(fd);
+                    return;
+                } else {
+                    sysputs("Wrong number of parameters.\n");
+                }
             } else if (strcmp(P_CMD, tok.str) == 0) {
                 // p command
-                p();
+                if ((tok.state == TOK_ENTER) || (tok.state == TOK_EOF)) {
+                    p();
+                } else {
+                    sysputs("Wrong number of parameters.\n");
+                }
             } else if (strcmp(K_CMD, tok.str) == 0) {
                 // k command
-                token(NULL, &tok);
-                if ((tok.state == TOK_ENTER) || (tok.state == TOK_EOF)) {
-                    k(tok.str);
+                len = token(NULL, &tok);
+                if (len == 0) {
+                    sysputs("Wrong number of parameters.\n");
+                } else if ((tok.state == TOK_ENTER) || (tok.state == TOK_EOF)) {
+                    k(tok.str, currpid, fd);
                 } else {
-                    sysputs("Wrong number of paramters.\n");
+                    sysputs("Wrong number of parameters.\n");
                 }
             } else if (strcmp(A_CMD, tok.str) == 0) {
                 // a command
-                token(NULL, &tok);
-                if ((tok.state == TOK_ENTER) || (tok.state == TOK_EOF)) {
+                len = token(NULL, &tok);
+                if (len == 0) {
+                    sysputs("Wrong number of parameters.\n");
+                } else if ((tok.state == TOK_ENTER) || (tok.state == TOK_EOF)) {
                     shellpid = sysgetpid();
                     milliseconds = atoi(tok.str);
                     syssignal(21, (sighandler_t) sig21);
                     pid = syscreate(a, STACKSIZE);
-                    if (!tok.detach) syswait(pid);
+                    if (!tok.detach) {
+                        syswait(pid);
+                    }
                 } else {
                     sysputs("Wrong number of parameters.\n");
                 }
             } else if (strcmp(T_CMD, tok.str) == 0) {
                 // t command
-                pid = syscreate(t, STACKSIZE);
-                if (!tok.detach) syswait(pid);
+                if ((tok.state == TOK_ENTER) || (tok.state == TOK_EOF)) {
+                    pid = syscreate(t, STACKSIZE);
+                    if (!tok.detach) syswait(pid);
+                } else {
+                    sysputs("Wrong number of parameters.\n");
+                }
+            } else if (strcmp("test", tok.str) == 0) {
+                // test cases
+                token(NULL, &tok);
+                sysclose(fd);
+                test_case = (char *)(tok.str);
+                pid = syscreate(run_test, STACKSIZE);
+                syswait(pid);
+                continue;
             } else {
                 sysputs("Invalid command specified.\n");
             }
@@ -216,7 +245,7 @@ void root(void) {
 
         sysclose(fd);
         sysputs("\n");
-        pid = syscreate(shell, STACKSIZE);
+        pid = syscreate(shell, STACKSIZE*4);
         syswait(pid);
     }
 }
@@ -246,10 +275,13 @@ void p(void) {
  * @brief Calls the syskill with signum 31 (which kills the process).
  * 
  * @param {p_str} The character having the pid.
+ * @param {currpid} The current pid of the process
+ * @param {fd} The file description of the keyboard device
  */
-void k(char *p_str) {
+void k(char *p_str, unsigned int currpid, int fd) {
     int ret;
     unsigned int pid = atoi(p_str);
+    if (pid == currpid) sysclose(fd);
     ret = syskill(pid, 31);
     if (ret == -999) {
         sysputs("No such process.\n");
@@ -288,7 +320,7 @@ void t(void) {
  *        Just prints `SIG21 SIG21` and then removes the signal.
  */
 void sig21(void) {
-    sysputs("\nSIG21 SIG21\n");
+    sysputs("SIG21 SIG21\n");
     syssignal(21, NULL);
 }
 

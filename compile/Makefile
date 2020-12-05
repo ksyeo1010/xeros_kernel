@@ -86,14 +86,14 @@ disp.o: ../c/disp.c ../h/xeroskernel.h ../h/xeroslib.h ../h/i386.h ../h/pcb.h
 ctsw.o: ../c/ctsw.c ../h/xeroskernel.h ../h/xeroslib.h ../h/i386.h
 syscall.o: ../c/syscall.c ../h/xeroskernel.h ../h/xeroslib.h
 create.o: ../c/create.c ../h/xeroskernel.h ../h/xeroslib.h
-user.o: ../c/user.c ../h/xeroskernel.h ../h/xeroslib.h 
+user.o: ../c/user.c ../h/xeroskernel.h ../h/xeroslib.h ../h/test.h
 sleep.o: ../c/sleep.c ../h/xeroskernel.h ../h/xeroslib.h
 signal.o: ../c/signal.c ../h/xeroskernel.h ../h/xeroslib.h ../h/pcb.h
 
 memHeader.o: ../c/memHeader.c ../h/xeroskernel.h  ../h/mem.h
 pcb.o: ../c/pcb.c ../h/xeroskernel.h ../h/pcb.h
-test.o: ../c/test.c ../h/xeroskernel.h ../h/xeroslib.h
+test.o: ../c/test.c ../h/xeroskernel.h ../h/xeroslib.h ../h/test.h
 sem.o: ../c/sem.c ../h/xeroskernel.h
 zerorand.o: ../c/zerorand.c ../h/zerorand.h ../h/xeroskernel.h ../h/xeroslib.h
-kbd.o: ../c/kbd.c ../h/kbd.h ../h/xeroskernel.h ../h/xeroslib.h ../h/i386.h
+kbd.o: ../c/kbd.c ../h/kbd.h ../h/xeroskernel.h ../h/xeroslib.h ../h/i386.h ../h/pcb.h
 di_calls.o: ../c/di_calls.c ../h/di_calls.h ../h/xeroskernel.h ../h/xeroslib.h
